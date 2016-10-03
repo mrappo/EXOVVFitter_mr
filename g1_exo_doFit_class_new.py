@@ -142,15 +142,17 @@ class doFit_wj_and_wlvj:
         #self.file_Directory="WWTree_24jan_jecV6/WWTree_"+self.channel+"/";
         #self.file_Directory="WWTree_25jan_jecV6_lowmass/WWTree_"+self.channel+"/";
         #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
-        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_9jun_80x/WWTree_"+self.channel+"/";
+#        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_9jun_80x/WWTree_"+self.channel+"/";
 #        self.file_Directory="WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
+        #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
+        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_22sep_jecV7_lowmass/WWTree_"+self.channel+"/";
                  
         #prepare background data and signal samples            
         self.signal_sample=in_signal_sample;
 
-        self.file_data = ("WWTree_data_golden.root");#keep blind!!!!
+#        self.file_data = ("WWTree_data_golden.root");#keep blind!!!!
 #        self.file_data = ("WWTree_pseudodataS.root");#fake data
-#        self.file_data = ("WWTree_pseudodata.root");#fake data
+        self.file_data = ("WWTree_pseudodata.root");#fake data
         self.file_signal     = ("WWTree_%s.root"%(self.signal_sample));
         self.file_WJets0_mc  = ("WWTree_WJets.root");
         self.file_VV_mc      = ("WWTree_VV.root");# WW+WZ
@@ -183,14 +185,14 @@ class doFit_wj_and_wlvj:
            elif self.wtagger_label.find("2") != -1: self.categoryID=17;
 
         if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
-            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.850);
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1.);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
-            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.021);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.);#1.021);
             self.rrv_wtagger_eff_reweight_forV.setError(0.151);
         if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("HP") != -1:
-            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.850);
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1.);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
-            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.021);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.);#021);
             self.rrv_wtagger_eff_reweight_forV.setError(0.151);
         if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
             self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.787);
@@ -210,8 +212,10 @@ class doFit_wj_and_wlvj:
 #        self.sigma_scale=1.086
 #        self.mean_shift = -1.629 #NEW
 #        self.sigma_scale=0.890 #NEW
-        self.mean_shift = -1.080
-        self.sigma_scale=1.066
+#        self.mean_shift = -1.080
+#        self.sigma_scale=1.066
+        self.mean_shift = 0.
+        self.sigma_scale=1.
         
 	self.plotsDir = 'plots_%s_%s' %(self.channel,self.wtagger_label)
         #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
@@ -461,88 +465,88 @@ objName ==objName_before ):
                        if TString(objName).Contains("RS1"): prefix = "RS"
                        elif TString(objName).Contains("Bulk"): prefix = "Bulk"
                        elif TString(objName).Contains("Higgs"): prefix = "Higgs"
-                       if TString(objName).Contains("_Higgs650"):
+                       if TString(objName).Contains("Higgs650"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = prefix+" M_{H}=0.65 TeV (#times100)";
-                       if TString(objName).Contains("_Higgs750"):
+                       if TString(objName).Contains("Higgs750"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = prefix+" M_{H}=0.75 TeV (#times100)";
-                       if TString(objName).Contains("_Higgs1000"):
+                       if TString(objName).Contains("Higgs1000"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = prefix+" M_{H}=1.0 TeV (#times100)";
-                       if TString(objName).Contains("_BulkGraviton600"):
+                       if TString(objName).Contains("BulkGraviton600"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=0.6 TeV (#times100)";
-                       if TString(objName).Contains("_BulkGraviton700"):
+                       if TString(objName).Contains("BulkGraviton700"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=0.7 TeV (#times100)";
                        if TString(objName).Contains("BulkGraviton750"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=750 GeV (#times20)";
-                       if TString(objName).Contains("_BulkGraviton800"):
+                       if TString(objName).Contains("BulkGraviton800"):
                            objName_signal_graviton = theObj ; 
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=0.8 TeV (#times100)";
-                       if TString(objName).Contains("_BulkGraviton900"):
+                       if TString(objName).Contains("BulkGraviton900"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=0.9 TeV (#times100)";
-                       if TString(objName).Contains("_BulkGraviton1000"):
+                       if TString(objName).Contains("BulkGraviton1000"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1100"):
+                       if TString(objName).Contains("BulkGraviton1100"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.1 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1200"):
+                       if TString(objName).Contains("BulkGraviton1200"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.2 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1300"):
+                       if TString(objName).Contains("BulkGraviton1300"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.3 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1400"):
+                       if TString(objName).Contains("BulkGraviton1400"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.4 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1500"):
+                       if TString(objName).Contains("BulkGraviton1500"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.5 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1600"):
+                       if TString(objName).Contains("BulkGraviton1600"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.6 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1700"):
+                       if TString(objName).Contains("BulkGraviton1700"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.7 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1800"):
+                       if TString(objName).Contains("BulkGraviton1800"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.8 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M1900"):
+                       if TString(objName).Contains("BulkGraviton1900"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=1.9 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2000"):
+                       if TString(objName).Contains("BulkGraviton2000"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2100"):
+                       if TString(objName).Contains("BulkGraviton2100"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2.1 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2200"):
+                       if TString(objName).Contains("BulkGraviton2200"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2.2 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2300"):
+                       if TString(objName).Contains("BulkGraviton2300"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2.3 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2400"):
+                       if TString(objName).Contains("BulkGraviton2400"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2.4 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M2500"):
+                       if TString(objName).Contains("BulkGraviton2500"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=2.5 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M3000"):
+                       if TString(objName).Contains("BulkGraviton3000"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=3 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_M3500"):
+                       if TString(objName).Contains("BulkGraviton3500"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=3.5 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_4000"):
+                       if TString(objName).Contains("BulkGraviton4000"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=4 TeV (#times100)";
-                       if TString(objName).Contains("_WW_lvjj_4500"):
+                       if TString(objName).Contains("BulkGraviton4500"):
                            objName_signal_graviton = theObj ;
                            objNameLeg_signal_graviton = "G_{"+prefix+"}"+" M_{G}=4.5 TeV (#times100)";
                     else : theLeg.AddEntry(theObj, objTitle,drawoption);
@@ -3014,7 +3018,8 @@ objName ==objName_before ):
 #            tmp_lumi=2197.96*1.023;
 #        else:
 #        tmp_lumi=814.;
-        tmp_lumi=3990.;
+#        tmp_lumi=3990.;
+        tmp_lumi=2300.;
         tmp_scale_to_lumi=1.;
             
         for i in range(treeIn.GetEntries()):
@@ -3093,16 +3098,22 @@ objName ==objName_before ):
                 #tmp_event_weight     =treeIn.eff_and_pu_Weight_2*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
                 #tmp_event_weight4fit = treeIn.hltweight*treeIn.puweight*treeIn.btagweight;                 
                 tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight;
-                tmp_event_weight4fit = treeIn.genWeight;
-                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.eff_and_pu_Weight*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+                tmp_event_weight4fit     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight; #JUST ADDED (LUCA)
+ #               tmp_event_weight4fit = treeIn.genWeight;
+#                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.eff_and_pu_Weight*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+
 #                tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #                tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
 #                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
              	            		
                 if label =="_data" or label =="_data_xww" :
 #                     print "OK"; 
-                    tmp_event_weight=1.;
-                    tmp_event_weight4fit=1.;                    
+#                    tmp_event_weight=1.;
+#                    tmp_event_weight4fit=1.;  
+                    tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight;
+                    tmp_event_weight4fit     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight; #JUST ADDED (LUCA)
+                   # tmp_event_weight4fit = treeIn.genWeight;
+                   # tmp_event_weight4fit = tmp_event_weight4fit*treeIn.eff_and_pu_Weight*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;            
 #                    tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #                    tmp_event_weight4fit = treeIn.genWeight;
 #                    tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
