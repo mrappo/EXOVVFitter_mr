@@ -12,6 +12,7 @@ from subprocess import Popen
 from optparse import OptionParser
 import CMS_lumi, tdrstyle
 from array import array
+from datetime import datetime
 
 from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TString, TF1,TFile,TLine, TLegend, TH1D,TH2D,THStack,TChain, TCanvas, TMatrixDSym, TMath, TText, TPad, RooFit, RooArgSet, RooArgList, RooArgSet, RooAbsData, RooAbsPdf, RooAddPdf, RooWorkspace, RooExtendPdf,RooCBShape, RooLandau, RooFFTConvPdf, RooGaussian, RooBifurGauss, RooArgusBG,RooDataSet, RooExponential,RooBreitWigner, RooVoigtian, RooNovosibirsk, RooRealVar,RooFormulaVar, RooDataHist, RooHist,RooCategory, RooChebychev, RooSimultaneous, RooGenericPdf,RooConstVar, RooKeysPdf, RooHistPdf, RooEffProd, RooProdPdf, TIter, kTRUE, kFALSE, kGray, kRed, kDashed, kGreen,kAzure, kOrange, kBlack,kBlue,kYellow,kCyan, kMagenta, kWhite
 
@@ -28,11 +29,13 @@ parser.add_option('--mass', action="store",type="float",dest="mass",default="150
 parser.add_option('-s','--simple', action='store', dest='simple', default=False, help='pre-limit in simple mode')
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
 parser.add_option('--inPath', action="store",type="string",dest="inPath",default="./")
-parser.add_option('--category', action="store",type="string",dest="category",default="")
-parser.add_option('--type', action="store",type="string",dest="type",default="")
+parser.add_option('--category', action="store",type="string",dest="category",default="HP")
+parser.add_option('--vbf', action="store_true",dest="VBF_process",default=False)
 parser.add_option('--jetalgo', action="store",type="string",dest="jetalgo",default="Mjsoftdrop")
 parser.add_option('--interpolate', action="store_true",dest="interpolate",default=False)
 parser.add_option('--luminosity', action="store", type="float", dest="luminosity_value", default="2300.")
+parser.add_option('--ntuple', action="store",type="string",dest="ntuple",default="WWTree_22sep_jecV7_lowmass")
+parser.add_option('--pseudodata', action="store_true",dest="pseudodata",default=False)
 
 (options, args) = parser.parse_args()
 
@@ -42,9 +45,109 @@ ROOT.gSystem.Load(options.inPath+"/PDFs/HWWLVJRooPdfs_cxx.so")
 
 from ROOT import draw_error_band, draw_error_band2, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
 
+
+#reweight_for_T_value=1.
+#reweight_for_V_value=1.
+#Sigma_Scale_Factor=1.
+#Mean_Shift=0.
+#file_data_used="WWTree_pseudodata.root"
+Ntuple_Path_lxplus="/afs/cern.ch/user/l/lbrianza/work/public/%s/"%options.ntuple
+#Ntuple_Path_lxplus="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_22sep_jecV7_lowmass/" #     17feb_jecV7_lowmass/" 22sep_jecV7_lowmass/"
+Luminosity_float_value=options.luminosity_value
+Sample_str_value=options.sample
+Mass_float_value=options.mass
+Mass_str=str("%.0f"%Mass_float_value)
+SampleMass_str=Sample_str_value+Mass_str
+
+Ntuple_dir="Ntuple_%s"%options.ntuple
+lumi_str_value=str("%.0f"%Luminosity_float_value);
+
+
+
+if not os.path.isdir(Ntuple_dir):
+       os.system("mkdir "+Ntuple_dir);
+
+
+
+if options.pseudodata:
+   
+   Data_dir_name=Ntuple_dir+"/pseudoData"
+   if not os.path.isdir(Data_dir_name):
+          os.system("mkdir "+Data_dir_name);
+   reweight_for_T_value=1.
+   reweight_for_V_value=1.
+   Sigma_Scale_Factor=1.
+   Mean_Shift=0.
+   file_data_used="WWTree_pseudodata.root"
+   
+   
+
+
+
+else:
+   
+   Data_dir_name=Ntuple_dir+"/trueData"
+   if not os.path.isdir(Data_dir_name):
+          os.system("mkdir "+Data_dir_name);
+   reweight_for_T_value=0.850
+   reweight_for_V_value=1.021
+   Sigma_Scale_Factor=1.066
+   Mean_Shift=-1.080
+   file_data_used="WWTree_data_golden_2p1.root"
+   
+  
+
+
+
+
+
+
+if options.VBF_process:
+          Lumi_dir=Data_dir_name+"/Lumi_%s_VBF"%lumi_str_value
+          if not os.path.isdir(Lumi_dir):
+                 os.system("mkdir "+Lumi_dir);
+          
+          plots_dir_1=Lumi_dir+"/plots_%s_%s_VBF" %(options.channel,options.category)
+          if not os.path.isdir(plots_dir_1):
+                 os.system("mkdir "+plots_dir_1);
+          
+          plots_dir_2=plots_dir_1+"/%s" %(options.sample)
+          if not os.path.isdir(plots_dir_2):
+                 os.system("mkdir "+plots_dir_2);
+          
+          cards_dir_1=Lumi_dir+"/cards_%s_%s_VBF" %(options.channel,options.category)
+          if not os.path.isdir(cards_dir_1):
+                 os.system("mkdir "+cards_dir_1);
+          
+          cards_dir_2=cards_dir_1+"/%s/" %(options.sample)
+          if not os.path.isdir(cards_dir_2):
+                 os.system("mkdir "+cards_dir_2);
+          
+
+else:
+          Lumi_dir=Data_dir_name+"/Lumi_%s"%lumi_str_value
+          if not os.path.isdir(Lumi_dir):
+                 os.system("mkdir "+Lumi_dir);
+          
+          plots_dir_1=Lumi_dir+"/plots_%s_%s" %(options.channel,options.category)
+          if not os.path.isdir(plots_dir_1):
+                 os.system("mkdir "+plots_dir_1);
+          
+          plots_dir_2=plots_dir_1+"/%s" %(options.sample)
+          if not os.path.isdir(plots_dir_2):
+                 os.system("mkdir "+plots_dir_2);
+          
+          cards_dir_1=Lumi_dir+"/cards_%s_%s" %(options.channel,options.category)
+          if not os.path.isdir(cards_dir_1):
+                 os.system("mkdir "+cards_dir_1);
+          
+          cards_dir_2=cards_dir_1+"/%s/" %(options.sample)
+          if not os.path.isdir(cards_dir_2):
+                 os.system("mkdir "+cards_dir_2);
+
 class doFit_wj_and_wlvj:
 
-    def __init__(self,in_luminosity, in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
+    def __init__(self, in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
 
         tdrstyle.setTDRStyle()
         TGaxis.SetMaxDigits(3)
@@ -59,7 +162,7 @@ class doFit_wj_and_wlvj:
         self.MODEL_4_mlvj_alter=fit_model_alter;
 	self.jetalgo = jetalgo
         self.interpolate = interpolate
-        self.luminosity=in_luminosity
+        #self.luminosity=in_luminosity
                 
         print "########################################################################################"
         print "######## define class: binning, variables, cuts, files and nuissance parameters ########"
@@ -145,7 +248,9 @@ class doFit_wj_and_wlvj:
         #self.file_Directory="WWTree_25jan_jecV6_lowmass/WWTree_"+self.channel+"/";
         #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
         #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_9jun_80x/WWTree_"+self.channel+"/";
-        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
+        #tmp_Ntuple_Path_lxplus=Ntuple_Path_lxplus+"WWTree_"+self.channel+"/";
+        self.file_Directory=Ntuple_Path_lxplus+"WWTree_"+self.channel+"/";
+        #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
 #        self.file_Directory="WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
                  
         #prepare background data and signal samples            
@@ -153,8 +258,15 @@ class doFit_wj_and_wlvj:
 
 #        self.file_data = ("WWTree_data_golden.root");#keep blind!!!!
 #        self.file_data = ("WWTree_pseudodataS.root");#fake data
-        self.file_data = ("WWTree_pseudodata.root");#fake data
-        self.file_signal     = ("WWTree_%s.root"%(self.signal_sample));
+        #self.file_data = ("WWTree_pseudodata.root");#fake data
+        
+        if (options.ntuple=="WWTree_17feb_jecV7_lowmass" and options.sample=="BulkGraviton"):
+           sample_tmp=options.sample+"_newxsec"+Mass_str;
+                   
+        else:
+           sample_tmp=self.signal_sample;
+        self.file_data = (file_data_used);
+        self.file_signal     = ("WWTree_%s.root"%(sample_tmp));#self.signal_sample));
         self.file_WJets0_mc  = ("WWTree_WJets.root");
         self.file_VV_mc      = ("WWTree_VV.root");# WW+WZ
         self.file_TTbar_mc   = ("WWTree_TTbar.root");
@@ -184,7 +296,29 @@ class doFit_wj_and_wlvj:
            if self.wtagger_label.find("0") != -1: self.categoryID=13;
            elif self.wtagger_label.find("1") != -1: self.categoryID=15;
            elif self.wtagger_label.find("2") != -1: self.categoryID=17;
-
+        
+        ### MATTEO CHANGED
+        if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", reweight_for_T_value);#0.850);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.042);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", reweight_for_V_value);#1.021);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.151);
+        if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("HP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", reweight_for_T_value);#0.850);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.042);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", reweight_for_V_value);#11.021);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.151);
+        if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.787);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.110);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+        if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("LP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.661);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.200);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+        '''
         if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
             self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
@@ -205,6 +339,7 @@ class doFit_wj_and_wlvj:
             self.rrv_wtagger_eff_reweight_forT.setError(0.200);
             self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
             self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+        '''
 
         print "wtagger efficiency correction for Top sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forT.getVal(), self.rrv_wtagger_eff_reweight_forT.getError());
         print "wtagger efficiency correction for V sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forV.getVal(), self.rrv_wtagger_eff_reweight_forV.getError());
@@ -215,9 +350,109 @@ class doFit_wj_and_wlvj:
 #        self.sigma_scale=0.890 #NEW
 #        self.mean_shift = -1.080
 #        self.sigma_scale=1.066
-        self.mean_shift = 0.
-        self.sigma_scale=1.
         
+        ### MATTEO CHANGED
+        self.mean_shift = Mean_Shift
+        self.sigma_scale= Sigma_Scale_Factor
+        #self.mean_shift = 0.
+        #self.sigma_scale=1.
+        
+        ### MATTEO CHANGED    
+	#lumi_float_value=options.luminosity_value;
+	lumi_str_value=str("%.0f"%Luminosity_float_value);
+	if options.VBF_process:
+	  tmp_vbf_name="_VBF_";
+	
+	else:
+	  tmp_vbf_name="_";
+	'''
+    if options.VBF_process:
+	  self.plotsDir = 'plots_VBF_%s_%s_lumi_%s' %(self.channel,self.wtagger_label,lumi_str_value);
+      #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+      if not os.path.isdir("cards_VBF_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value)):
+            os.system("mkdir cards_VBF_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value));
+            
+        self.rlt_DIR="cards_VBF_%s_%s_lumi_%s/"%(self.channel,self.wtagger_label,lumi_str_value)
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other_VBF_wwlvj_%s_%s_%s_lumi_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_VBF_%s_%s_%s_lumi_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_VBF_%s_%s_%s_lumi_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_VBF_%s_%s_%s_lumi_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        
+	
+    else: 	  
+	self.plotsDir = 'plots_%s_%s_lumi_%s' %(self.channel,self.wtagger_label,lumi_str_value);
+        #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+        if not os.path.isdir("cards_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value)):
+            os.system("mkdir cards_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value));
+        self.rlt_DIR="cards_%s_%s_lumi_%s/"%(self.channel,self.wtagger_label,lumi_str_value)
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s_%s_%s_lumi_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+	'''
+	'''
+	### MATTEO CORRECTED
+	self.plotsDir = 'plots%s%s_%s_lumi_%s' %(tmp_vbf_name,self.channel,self.wtagger_label,lumi_str_value)
+        #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+        if not os.path.isdir("cards%s%s_%s_lumi_%s"%(tmp_vbf_name,self.channel,self.wtagger_label,lumi_str_value)):
+            os.system("mkdir cards%s%s_%s_lumi_%s"%(tmp_vbf_name,self.channel,self.wtagger_label,lumi_str_value));
+        self.rlt_DIR="cards%s%s_%s_lumi_%s/"%(tmp_vbf_name,self.channel,self.wtagger_label,lumi_str_value)
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other%swwlvj_%s_%s_%s_lumi_%s.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_workspace.root"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_unbin.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_counting.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        
+	'''
+	'''
+    ### MATTEO CORRECTED VERSION 2
+	self.plotsDir = Lumi_dir+"/plots_%s_%s/%s/" %(self.channel,self.wtagger_label,options.sample)
+        #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+        if not os.path.isdir(Lumi_dir+"/cards_%s_%s/%s/"%(self.channel,self.wtagger_label,options.sample)):
+            os.system("mkdir "+Lumi_dir+"/cards_%s_%s/%s/"%(self.channel,self.wtagger_label,options.sample));
+        self.rlt_DIR=Lumi_dir+"/cards_%s_%s/%s/"%(self.channel,self.wtagger_label,options.sample)
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other%swwlvj_%s_%s_%s_lumi_%s.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_workspace.root"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_unbin.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj%s%s_%s_%s_lumi_%s_counting.txt"%(tmp_vbf_name,self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+	'''
+        
+        
+	### MATTEO CORRECTED VERSION 3
+	self.plotsDir = plots_dir_2
+        #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+        self.rlt_DIR = cards_dir_2
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s_%s_%s_lumi_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+    
+        
+        ''' LUCA ORIGINAL
 	self.plotsDir = 'plots_%s_%s' %(self.channel,self.wtagger_label)
         #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
         if not os.path.isdir("cards_%s_%s"%(self.channel,self.wtagger_label)):
@@ -232,7 +467,7 @@ class doFit_wj_and_wlvj:
         self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label)
         ## workspace for the binned limit
         self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label)
-        
+        '''
         self.file_out=open(self.file_rlt_txt,"w");
         self.file_out.write("Welcome:\n");
         self.file_out.close()
@@ -313,8 +548,10 @@ class doFit_wj_and_wlvj:
     
                                                                 
         # shape parameter uncertainty
-        self.FloatingParams=RooArgList("floatpara_list");
-
+        self.FloatingParams=RooArgList("floatpara_list");   
+    
+    
+    
     def uncertainties(self,label_tstring):
     
        self.signal_jet_energy_scale_uncertainty_up = -0.018
@@ -563,7 +800,7 @@ objName ==objName_before ):
        
        ### MATTEO ADDED. 
        ### The luminosity is expressed in pb. Is a float.
-       lumi_val=self.luminosity;
+       lumi_val=Luminosity_float_value;
        lumi_print_scale_factor=1000.;
        tmp_lumi_val= lumi_val/lumi_print_scale_factor;
        
@@ -2064,15 +2301,13 @@ objName ==objName_before ):
 #LUCA
         if (interpolate==0):            
             if not self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj"):
-                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+
-                                                                self.channel+"_mlvj", rrv_tmp.getVal()*signalInt_val );
+                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj", rrv_tmp.getVal()*signalInt_val );
                 getattr(self.workspace4fit_,"import")(rrv_number_fitting_signal_region_mlvj);
             else :
                 self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj").setVal(rrv_tmp.getVal()*signalInt_val);
 
         else:
-                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+
-                                                                self.channel+"_mlvj", rrv_tmp.getVal() );
+                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj", rrv_tmp.getVal() );
                 getattr(self.workspace4fit_,"import")(rrv_number_fitting_signal_region_mlvj);
 
         self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj").Print();
@@ -2678,7 +2913,13 @@ objName ==objName_before ):
         fullInt_val = fullInt.getVal()
         signalInt_val = signalInt.getVal()/fullInt_val
         ## take the value from the fit (normalization) and multiply it from the ratio of the integrals
-        rrv_number_WJets_in_mj_signal_region_from_fitting = RooRealVar("rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),"rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal()*signalInt_val);
+        rrv_number_WJets_in_mj_signal_region_from_fitting = RooRealVar("rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),"rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),((self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal())*signalInt_val));
+        print"\n\n----------------- MATTEO CHECK -----------------\n\n"
+        print "rrv_number%s_%s_mj: \t\t"%(label,self.channel)
+        print self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal()
+        print "rrv_number_WJets_in_mj_signal_region_from_fitting: \t\t %f"%(rrv_number_WJets_in_mj_signal_region_from_fitting.getVal())
+        print "signal instegral val: \t\t %f"%signalInt_val
+        print "\n\n-----------------------------------------------\n\n"
 
         #### Error on the normalization --> from a dedicated function taking into account shape uncertainty
         rrv_number_WJets_in_mj_signal_region_from_fitting.setError( Calc_error_extendPdf(rdataset_data_mj, model_WJets, rfresult,"signal_region") );
@@ -3029,7 +3270,7 @@ objName ==objName_before ):
 #        tmp_lumi=814.;
         #tmp_lumi=2300.;
         #tmp_lumi=2197.96*1.023;
-        tmp_lumi=self.luminosity;
+        tmp_lumi=Luminosity_float_value;
         tmp_scale_to_lumi=1.;
         print "--------------------------------------------"
         print "\n\nMATTEO_CHECK"
@@ -3037,14 +3278,49 @@ objName ==objName_before ):
         print "--------------------------------------------\n\n"
             
         for i in range(treeIn.GetEntries()):
-            if i % 100000 == 0: print "iEntry: ",i
             treeIn.GetEntry(i);
+            
+            if (options.pseudodata or TString(label).Contains("Bulk") or TString(label).Contains("Higgs") or TString(label).Contains("_STop") or TString(label).Contains("_TTbar") or TString(label).Contains("_VV")):
+               tmp_scale_to_lumi_global=TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi);
+               tmp_event_weight_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+               tmp_event_weight4fit_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+               tmp_event_weight4fit_global = tmp_event_weight4fit_global*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+               
+            else:
+               tmp_scale_to_lumi_global=1.;
+               tmp_event_weight_global = 1.;
+               tmp_event_weight4fit_global = 1.;
+            
+            if i==0:
+                # eff_and_pu_Weight_2*genWeight*wSampleWeight
+                tmp_scale_to_lumi = tmp_scale_to_lumi_global;#TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi);
+#            tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+#            print "tmp scale to lumi: ",tmp_scale_to_lumi
+            
+            if TString(label).Contains("_STop"): 
+               if i % 1000 == 0: 
+                  print "\niEntry: ",i
+                  print "tmp_scale_to_lumi:\t\t %e" % tmp_scale_to_lumi
+                  print "treeIn.genWeight:\t\t %e" % treeIn.genWeight
+                  print "treeIn.wSampleWeight:\t\t%e" % treeIn.wSampleWeight
+                  print "tmp_lumi: \t\t %f" % tmp_lumi
+             
+            else: 
+               if i % 100000 == 0: 
+                  print "\niEntry: \t\t%i" %i
+                  print "tmp_scale_to_lumi:\t\t %f" % tmp_scale_to_lumi
+                  print "treeIn.genWeight:\t\t %e" % treeIn.genWeight
+                  print "treeIn.wSampleWeight:\t\t%e" % treeIn.wSampleWeight
+                  print "tmp_lumi: \t\t %f" % tmp_lumi 
+            
 
+            ''' LUCA ORIGNAL
             if i==0:
                 # eff_and_pu_Weight_2*genWeight*wSampleWeight
                 tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #            tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #            print "tmp scale to lumi: ",tmp_scale_to_lumi
+            '''
 
             tmp_jet_mass=getattr(treeIn, jet_mass);
 
@@ -3097,23 +3373,66 @@ objName ==objName_before ):
 
 #                if (label=="_data_xww") and (treeIn.jet_mass_pr > 65.) and (treeIn.jet_mass_pr < 135.) : self.isGoodEvent = 0; #BLINDING
 
-            #VBF SELECTION
+            '''
+            #VBF SELECTION MATTEO ADDED
+            if self.IsGoodEvent==1:
+               if options.VBF_process:
+               
+                  if SampleMass_str.find('Higgs650') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                     if (abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<4.2 or abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)>9.3): self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<856 or treeIn.vbf_maxpt_jj_m>5774): self.isGoodEvent=0;
+               
+               
+                  if SampleMass_str.find('Higgs1000') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                     if (abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<4.04 or abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)>10.4): self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<973 or treeIn.vbf_maxpt_jj_m>4531): self.isGoodEvent=0;
+               
+               
+                  if SampleMass_str.find('BulkGraviton600') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                  #if abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5: self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<575 or treeIn.vbf_maxpt_jj_m>3641): self.isGoodEvent=0;
+               
+                
+               
+            #else: self.isGoodEvent=1;
+            '''
+            '''
             if ((options.type).find('vbf') != -1 and treeIn.njets<2): self.isGoodEvent=0;
             if ((options.type).find('vbf') != -1 and abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5): self.isGoodEvent=0;
             if ((options.type).find('vbf') != -1 and treeIn.vbf_maxpt_jj_m<250): self.isGoodEvent=0;
 
             if ((options.type).find('ggH') != -1 and treeIn.njets>1): self.isGoodEvent=0;
- 
+            ''' 
 #            if ((label =="_data" or label =="_data_xww") and treeIn.jet_mass_pr >105 and treeIn.jet_mass_pr < 135 ) : self.isGoodEvent = 0; 
 
 	    
+            '''
+            if options.pseudodata and (TString(label).Contains("_STop") or TString(label).Contains("_TTbar") or TString(label).Contains("_VV")):
+               #tmp_scale_to_lumi_global=TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*Luminosity_float_value);
+               tmp_event_weight_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+               tmp_event_weight4fit_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+               tmp_event_weight4fit_global = tmp_event_weight4fit_global*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+
+
+
+            else:
+               #tmp_scale_to_lumi_global=Luminosity_float_value;
+               tmp_event_weight_global = 1.
+               tmp_event_weight4fit_global = 1.
+            '''
+               
+            
+            
             if self.isGoodEvent == 1:
                 ### weigh MC events              
                 #tmp_event_weight     =treeIn.eff_and_pu_Weight_2*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
                 #tmp_event_weight4fit = treeIn.hltweight*treeIn.puweight*treeIn.btagweight;                 
-                tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
-                tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
-                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+                tmp_event_weight     = tmp_event_weight_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+                tmp_event_weight4fit =tmp_event_weight4fit_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+                #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
 #                tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight/tmp_scale_to_lumi;
 #                tmp_event_weight4fit = treeIn.genWeight;
 #                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.eff_and_pu_Weight*treeIn.wSampleWeight*tmp_lumi#/tmp_scale_to_lumi;
@@ -3126,9 +3445,9 @@ objName ==objName_before ):
 #                     print "OK"; 
 #                    tmp_event_weight=1.;
 #                    tmp_event_weight4fit=1.;                    
-                    tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
-                    tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
-                    tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+                    tmp_event_weight     = tmp_event_weight_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+                    tmp_event_weight4fit = tmp_event_weight4fit_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+                    #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
                     #tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
                     #tmp_event_weight4fit = treeIn.genWeight;
                     #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi#/tmp_scale_to_lumi;
@@ -3342,6 +3661,9 @@ objName ==objName_before ):
         self.prepare_limit("sideband_correction_method1",1,0,0)
         ### finale plot and check of the workspace
         self.read_workspace(1)
+        print "\n\n----------------------------------------------------\n\n"
+        print "MATTEO CHECK:\tANALYSIS SIDEBAND CORRECTION FUNCTION ENDED :)"
+        print "\n\n----------------------------------------------------\n\n"
         
     ##### Analysis with no shape uncertainty on alpha
     def analysis_sideband_correction_method1_without_shape_and_psmodel_systematic(self):
@@ -3983,37 +4305,63 @@ objName ==objName_before ):
         
 
 ### funtion to run the complete alpha analysis
-def pre_limit_sb_correction(luminosity,method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction(method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                             in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False): 
 
     print "#################### pre_limit_sb_correction: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
     print method    
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     getattr(boostedW_fitter,"analysis_sideband_correction_%s"%(method) )();
+    
+    print "\n\n----------------------------------------------------\n\n"
+    print "MATTEO CHECK:\tBACKGROUND EVALUATION ENDED :)"
+    print "\n\n----------------------------------------------------\n\n"
                                                 
 ### funtion to run the analysis without systematics
-def pre_limit_sb_correction_without_systematic(luminosity, channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction_without_systematic( channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                                                  in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False):
 
     print "#################### pre_limit_sb_correction_without_systermatic: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     boostedW_fitter.analysis_sideband_correction_method1_without_shape_and_psmodel_systematic()
 
 
-def pre_limit_simple(luminosity,channel,sample,lomass,himass):
+def pre_limit_simple(channel,sample,lomass,himass):
     print "######################### pre_limit_simple for %s sampel"%(channel)
-    pre_limit_sb_correction_without_systematic(luminosity,channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
+    pre_limit_sb_correction_without_systematic(channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
+
+
+
+
+
+    
+def timenow(form=0):
+    if form:
+       timenow=datetime.strftime(datetime.now(), '%d-%m-%Y_%H:%M:%S')   
+    else:
+       timenow=datetime.strftime(datetime.now(), '%d-%m-%Y %H:%M:%S')
+    return timenow
+    
 
 #### Main Code
 if __name__ == '__main__':
 
+    start_time=timenow(0);
     channel=options.channel;
     #sample=options.sample; #BulkGraviton_lvjj_c0p2_M1000   
     mass=options.mass;
-    luminosity=options.luminosity_value;
+    #luminosity=options.luminosity_value;
     #sample = "RS1G_WW_lvjj_M%i"%(mass)
     #sample = options.sample+"_M"+str(int(mass))
-    sample = options.sample+str(int(mass))
+    #sample = options.sample+str(int(mass))
+    
+   
+    #if (options.ntuple=="WWTree_17feb_jecV7_lowmass" and options.sample=="BulkGraviton"):
+    #  sample = options.sample+"_newxsec"+str(int(mass));
+    
+    #else:
+    sample = options.sample+str(int(mass));
+    
     
     lomass = mass - mass*15./100.;
     himass = mass + mass*15./100.; 
@@ -4022,17 +4370,55 @@ if __name__ == '__main__':
             
     if options.simple:
         print '################# simple mode for %s sample'%(channel)
-        pre_limit_simple(luminosity,channel,sample,lomass,himass);
+        pre_limit_simple(channel,sample,lomass,himass);
     else:
         if options.category.find('HP2') != -1 or options.category.find('ALLP2') != -1:	
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
 	else:
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"ExpN","ExpN",options.interpolate) 
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"Exp","ExpTail",options.interpolate) 
+    
+    end_time=timenow(0);
+    
+    lumi_str_value=str("%.0f"%Luminosity_float_value);
+    m=str(mass);
+    
+    
+    '''
+    if options.VBF_process:
+        dir_name="Ntuple_%s/Lumi_%s_VBF"%(options.ntuple,lumi_str_value)
+        if not os.path.isdir(dir_name):
+               os.system("mkdir "+dir_name);
 	
-    print "\n\n------------------------------------------------"
-    print "\n\nMATTEO CHECK"
-    print "BACKGROUND EVALUATION ENDED!!!!!!"
-    print ":)"
-    print "\n\n------------------------------------------------"
+    else:
+        dir_name="Ntuple_%s/Lumi_%s"%(options.ntuple,lumi_str_value)
+        if not os.path.isdir(dir_name):
+               os.system("mkdir "+dir_name);
+    '''
+    output_dir_name=Lumi_dir+"/Data_Settings_%s_%s"%(channel,SampleMass_str)
+    if not os.path.isdir(output_dir_name):
+          os.system("mkdir "+output_dir_name);
+
+    #dir_name="Ntuple_%s/Data_Settings_%s_%s_lumi_%s/"%(options.ntuple,channel,Sample_str_value,lumi_str_value)
+    
+    filename=output_dir_name+"/Data_Settings_%s_%s.txt"%(channel,SampleMass_str);
+    f = open(filename, 'w')
+    f.write("Parametri utilizzati per la valutazione del Background\n\n")
+    f.write("\nchannel:\t\t\t\t%s" %channel)
+    f.write("\nsample :\t\t\t\t%s" %sample)
+    f.write("\nMass : \t\t\t\t\t%s" %m)
+    #f.write("\ncategory :\t%s" % category)
+    #f.write("\nprocess_mode :\t%s" %process_mode)
+    #f.write("\njetalgo :\t%s" %jetalgo)
+    #f.write("\ninterpolate :\t%s" %interpolate)
+    f.write("\nluminosity :\t\t\t%f" %Luminosity_float_value)
+    f.write("\nntuple_dir :\t\t\t%s" %Ntuple_Path_lxplus)
+    f.write("\nntuple_used :\t\t\t%s" %file_data_used)
+    f.write("\nmean_shift :\t\t\t%f" %Mean_Shift)
+    f.write("\nsigma_scale_factor :\t%f" %Sigma_Scale_Factor)
+    f.write("\nreweight_for_T :\t\t%f" %reweight_for_T_value)
+    f.write("\nreweight_for_V :\t\t%f" %reweight_for_V_value)
+    f.write("\n\n\nStarting time : \t\t%s"%start_time)
+    f.write("\n\n\nEnding time : \t\t\t%s"%end_time)
+    f.closed

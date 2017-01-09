@@ -12,6 +12,7 @@ from subprocess import Popen
 from optparse import OptionParser
 import CMS_lumi, tdrstyle
 from array import array
+from datetime import datetime
 
 from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TString, TF1,TFile,TLine, TLegend, TH1D,TH2D,THStack,TChain, TCanvas, TMatrixDSym, TMath, TText, TPad, RooFit, RooArgSet, RooArgList, RooArgSet, RooAbsData, RooAbsPdf, RooAddPdf, RooWorkspace, RooExtendPdf,RooCBShape, RooLandau, RooFFTConvPdf, RooGaussian, RooBifurGauss, RooArgusBG,RooDataSet, RooExponential,RooBreitWigner, RooVoigtian, RooNovosibirsk, RooRealVar,RooFormulaVar, RooDataHist, RooHist,RooCategory, RooChebychev, RooSimultaneous, RooGenericPdf,RooConstVar, RooKeysPdf, RooHistPdf, RooEffProd, RooProdPdf, TIter, kTRUE, kFALSE, kGray, kRed, kDashed, kGreen,kAzure, kOrange, kBlack,kBlue,kYellow,kCyan, kMagenta, kWhite
 
@@ -28,11 +29,13 @@ parser.add_option('--mass', action="store",type="float",dest="mass",default="150
 parser.add_option('-s','--simple', action='store', dest='simple', default=False, help='pre-limit in simple mode')
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
 parser.add_option('--inPath', action="store",type="string",dest="inPath",default="./")
-parser.add_option('--category', action="store",type="string",dest="category",default="")
-parser.add_option('--type', action="store",type="string",dest="type",default="")
+parser.add_option('--category', action="store",type="string",dest="category",default="HP")
+parser.add_option('--vbf', action="store_true",dest="VBF_process",default=False)
 parser.add_option('--jetalgo', action="store",type="string",dest="jetalgo",default="Mjsoftdrop")
 parser.add_option('--interpolate', action="store_true",dest="interpolate",default=False)
 parser.add_option('--luminosity', action="store", type="float", dest="luminosity_value", default="2300.")
+parser.add_option('--ntuple', action="store",type="string",dest="ntuple",default="WWTree_22sep_jecV7_lowmass")
+parser.add_option('--pseudodata', action="store_true",dest="pseudodata",default=False)
 
 (options, args) = parser.parse_args()
 
@@ -42,13 +45,122 @@ ROOT.gSystem.Load(options.inPath+"/PDFs/HWWLVJRooPdfs_cxx.so")
 
 from ROOT import draw_error_band, draw_error_band2, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
 
+
+###############################################
+#### MATTEO: global variables definition
+###############################################
+Ntuple_Path_lxplus="/afs/cern.ch/user/l/lbrianza/work/public/%s/"%options.ntuple
+Luminosity_float_value=options.luminosity_value
+Sample_str_value=options.sample
+Mass_float_value=options.mass
+Mass_str=str("%.0f"%Mass_float_value)
+SampleMass_str=Sample_str_value+Mass_str
+Ntuple_dir="Ntuple_%s"%options.ntuple
+lumi_str_value=str("%.0f"%Luminosity_float_value);
+
+if not os.path.isdir(Ntuple_dir):
+       os.system("mkdir "+Ntuple_dir);
+
+
+#### At line 257 there are the data used
+
+
+##########################################################
+##### MATTEO: switch between data and pseudodata
+##########################################################
+if options.pseudodata:
+   
+   Data_dir_name=Ntuple_dir+"/pseudoData"
+   if not os.path.isdir(Data_dir_name):
+          os.system("mkdir "+Data_dir_name);
+   reweight_for_T_value=0.850#1.
+   reweight_for_V_value=1.021#1.
+   Sigma_Scale_Factor=1.
+   Mean_Shift=0.
+   file_data_used="WWTree_pseudodata.root"
+   
+   
+
+
+
+else:
+   
+   Data_dir_name=Ntuple_dir+"/trueData"
+   if not os.path.isdir(Data_dir_name):
+          os.system("mkdir "+Data_dir_name);
+   reweight_for_T_value=0.850
+   reweight_for_V_value=1.021
+   Sigma_Scale_Factor=1.066
+   Mean_Shift=-1.080
+   file_data_used="WWTree_data_golden_2p1.root"
+   
+  
+
+
+
+
+############################################################
+####### MATTEO: switch between VBF and not VBF process
+############################################################
+if options.VBF_process:
+          Lumi_dir=Data_dir_name+"/Lumi_%s_VBF"%lumi_str_value
+          if not os.path.isdir(Lumi_dir):
+                 os.system("mkdir "+Lumi_dir);
+          
+          plots_dir_1=Lumi_dir+"/plots_%s_%s_VBF" %(options.channel,options.category)
+          if not os.path.isdir(plots_dir_1):
+                 os.system("mkdir "+plots_dir_1);
+          
+          plots_dir_2=plots_dir_1+"/%s" %(options.sample)
+          if not os.path.isdir(plots_dir_2):
+                 os.system("mkdir "+plots_dir_2);
+          
+          cards_dir_1=Lumi_dir+"/cards_%s_%s_VBF" %(options.channel,options.category)
+          if not os.path.isdir(cards_dir_1):
+                 os.system("mkdir "+cards_dir_1);
+          
+          cards_dir_2=cards_dir_1+"/%s/" %(options.sample)
+          if not os.path.isdir(cards_dir_2):
+                 os.system("mkdir "+cards_dir_2);
+          
+
+else:
+          Lumi_dir=Data_dir_name+"/Lumi_%s"%lumi_str_value
+          if not os.path.isdir(Lumi_dir):
+                 os.system("mkdir "+Lumi_dir);
+          
+          plots_dir_1=Lumi_dir+"/plots_%s_%s" %(options.channel,options.category)
+          if not os.path.isdir(plots_dir_1):
+                 os.system("mkdir "+plots_dir_1);
+          
+          plots_dir_2=plots_dir_1+"/%s" %(options.sample)
+          if not os.path.isdir(plots_dir_2):
+                 os.system("mkdir "+plots_dir_2);
+          
+          cards_dir_1=Lumi_dir+"/cards_%s_%s" %(options.channel,options.category)
+          if not os.path.isdir(cards_dir_1):
+                 os.system("mkdir "+cards_dir_1);
+          
+          cards_dir_2=cards_dir_1+"/%s/" %(options.sample)
+          if not os.path.isdir(cards_dir_2):
+                 os.system("mkdir "+cards_dir_2);
+
+
+
+
+
+######################################################
+###### Main class: 
+###### the normal tabulation is 5 for def and 9 for the function code
+######################################################
+
 class doFit_wj_and_wlvj:
 
-    def __init__(self,in_luminosity, in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
+    def __init__(self, in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
 
         tdrstyle.setTDRStyle()
         TGaxis.SetMaxDigits(3)
-	
+
         RooAbsPdf.defaultIntegratorConfig().setEpsRel(1e-9) ;
         RooAbsPdf.defaultIntegratorConfig().setEpsAbs(1e-9) ;
 
@@ -57,9 +169,9 @@ class doFit_wj_and_wlvj:
         self.leg = TLegend(); 
         self.MODEL_4_mlvj=fit_model;
         self.MODEL_4_mlvj_alter=fit_model_alter;
-	self.jetalgo = jetalgo
+        self.jetalgo = jetalgo
         self.interpolate = interpolate
-        self.luminosity=in_luminosity
+        #self.luminosity=in_luminosity
                 
         print "########################################################################################"
         print "######## define class: binning, variables, cuts, files and nuissance parameters ########"
@@ -85,9 +197,9 @@ class doFit_wj_and_wlvj:
         in_mlvj_max=in_mlvj_min+nbins_mlvj*self.BinWidth_mlvj;
 
         ## define jet mass variable
-	varname = "Softdrop jet mass (GeV)"
-	if self.jetalgo == "jet_mass_pr": varname = "Pruned jet mass (GeV)"
-	if self.jetalgo == "PuppiAK8_jet_mass_pr": varname = "Pruned jet mass (GeV)"
+        varname = "Softdrop jet mass (GeV)"
+        if self.jetalgo == "jet_mass_pr": varname = "Pruned jet mass (GeV)"
+        if self.jetalgo == "PuppiAK8_jet_mass_pr": varname = "Pruned jet mass (GeV)"
         rrv_mass_j = RooRealVar("rrv_mass_j",varname,(in_mj_min+in_mj_max)/2.,in_mj_min,in_mj_max,"GeV");
         rrv_mass_j.setBins(nbins_mj);
 
@@ -113,20 +225,17 @@ class doFit_wj_and_wlvj:
         #define sidebands
         self.mj_sideband_lo_min = in_mj_min;
         self.mj_sideband_lo_max = 65
-#        self.mj_sideband_lo_max = 57
         self.mj_sideband_hi_min = 135
         self.mj_sideband_hi_max = in_mj_max;
-#        self.mj_signal_min = 57
-#        self.mj_signal_max = 65
         self.mj_signal_min = 65
         self.mj_signal_max = 105
         if (options.category).find('W') != -1:
          self.mj_signal_min = 65
-         self.mj_signal_max = 85	        
-	elif (options.category).find('Z') != -1:
+         self.mj_signal_max = 85       
+        elif (options.category).find('Z') != -1:
          self.mj_signal_min = 85
          self.mj_signal_max = 105
-	 	    
+    
         ## zone definition in the jet mass 
         rrv_mass_j.setRange("sb_lo",self.mj_sideband_lo_min,self.mj_sideband_lo_max);
         rrv_mass_j.setRange("signal_region",self.mj_signal_min,self.mj_signal_max);
@@ -140,21 +249,19 @@ class doFit_wj_and_wlvj:
         rrv_mass_lvj.setRange("high_mass",2500,in_mlvj_max);
 
         #prepare the data and mc files --> set the working directory and the files name
-        #self.file_Directory="AnaSigTree_25ns/"+self.channel+"/";
-        #self.file_Directory="WWTree_24jan_jecV6/WWTree_"+self.channel+"/";
-        #self.file_Directory="WWTree_25jan_jecV6_lowmass/WWTree_"+self.channel+"/";
-        #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
-        #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_9jun_80x/WWTree_"+self.channel+"/";
-        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
-#        self.file_Directory="WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
+        self.file_Directory=Ntuple_Path_lxplus+"WWTree_"+self.channel+"/";
                  
         #prepare background data and signal samples            
         self.signal_sample=in_signal_sample;
-
-#        self.file_data = ("WWTree_data_golden.root");#keep blind!!!!
-#        self.file_data = ("WWTree_pseudodataS.root");#fake data
-        self.file_data = ("WWTree_pseudodata.root");#fake data
-        self.file_signal     = ("WWTree_%s.root"%(self.signal_sample));
+        
+        if (options.ntuple=="WWTree_17feb_jecV7_lowmass" and options.sample=="BulkGraviton"):
+           sample_tmp=options.sample+"_newxsec"+Mass_str;
+                   
+        else:
+           sample_tmp=self.signal_sample;
+           
+        self.file_data = (file_data_used);
+        self.file_signal     = ("WWTree_%s.root"%(sample_tmp));#self.signal_sample));
         self.file_WJets0_mc  = ("WWTree_WJets.root");
         self.file_VV_mc      = ("WWTree_VV.root");# WW+WZ
         self.file_TTbar_mc   = ("WWTree_TTbar.root");
@@ -169,31 +276,32 @@ class doFit_wj_and_wlvj:
            if self.wtagger_label.find("0") != -1: self.categoryID=6;
            elif self.wtagger_label.find("1") != -1: self.categoryID=8;
            elif self.wtagger_label.find("2") != -1: self.categoryID=10;
-	if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
-	   self.categoryID=1;
+        if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
+           self.categoryID=1;
            if self.wtagger_label.find("0") != -1: self.categoryID=7;
            elif self.wtagger_label.find("1") != -1: self.categoryID=9;
            elif self.wtagger_label.find("2") != -1: self.categoryID=11;
-	if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("LP") != -1:
-	   self.categoryID=2;
+        if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("LP") != -1:
+           self.categoryID=2;
            if self.wtagger_label.find("0") != -1: self.categoryID=12;
            elif self.wtagger_label.find("1") != -1: self.categoryID=14;
            elif self.wtagger_label.find("2") != -1: self.categoryID=16;
-	if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
-	   self.categoryID=3;
+        if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
+           self.categoryID=3;
            if self.wtagger_label.find("0") != -1: self.categoryID=13;
            elif self.wtagger_label.find("1") != -1: self.categoryID=15;
            elif self.wtagger_label.find("2") != -1: self.categoryID=17;
-
+        
+        ### MATTEO CHANGED
         if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
-            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1);#0.850);
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", reweight_for_T_value);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
-            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", 1);#1.021);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", reweight_for_V_value);#1.021);
             self.rrv_wtagger_eff_reweight_forV.setError(0.151);
         if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("HP") != -1:
-            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1);#0.850);
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", reweight_for_T_value);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
-            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", 1);#11.021);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", reweight_for_V_value);#11.021);
             self.rrv_wtagger_eff_reweight_forV.setError(0.151);
         if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
             self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.787);
@@ -205,7 +313,7 @@ class doFit_wj_and_wlvj:
             self.rrv_wtagger_eff_reweight_forT.setError(0.200);
             self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
             self.rrv_wtagger_eff_reweight_forV.setError(0.332);
-
+      
         print "wtagger efficiency correction for Top sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forT.getVal(), self.rrv_wtagger_eff_reweight_forT.getError());
         print "wtagger efficiency correction for V sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forV.getVal(), self.rrv_wtagger_eff_reweight_forV.getError());
         
@@ -215,29 +323,41 @@ class doFit_wj_and_wlvj:
 #        self.sigma_scale=0.890 #NEW
 #        self.mean_shift = -1.080
 #        self.sigma_scale=1.066
-        self.mean_shift = 0.
-        self.sigma_scale=1.
         
-	self.plotsDir = 'plots_%s_%s' %(self.channel,self.wtagger_label)
+        ### MATTEO CHANGED
+        self.mean_shift = Mean_Shift
+        self.sigma_scale= Sigma_Scale_Factor
+
+        
+        ### MATTEO CHANGED    
+        lumi_str_value=str("%.0f"%Luminosity_float_value);
+        if options.VBF_process:
+           tmp_vbf_name="_VBF_";
+
+        else:
+           tmp_vbf_name="_";
+       
+        
+        ### MATTEO CORRECTED VERSION 3
+        self.plotsDir = plots_dir_2
         #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
-        if not os.path.isdir("cards_%s_%s"%(self.channel,self.wtagger_label)):
-            os.system("mkdir cards_%s_%s"%(self.channel,self.wtagger_label));
-        self.rlt_DIR="cards_%s_%s/"%(self.channel,self.wtagger_label)
+        self.rlt_DIR = cards_dir_2
 
         ## extra text file
-        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s_%s_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label)
+        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s_%s_%s_lumi_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
         ## workspace for limit
-        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_%s_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label)
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
         ## datacard for the ubninned limit
-        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label)
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
         ## workspace for the binned limit
-        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label)
-        
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+       
         self.file_out=open(self.file_rlt_txt,"w");
         self.file_out.write("Welcome:\n");
         self.file_out.close()
         self.file_out=open(self.file_rlt_txt,"a+");
-
+         
+           
         ## color palette 
         self.color_palet={ #color palet
             'data' : 1,
@@ -258,14 +378,14 @@ class doFit_wj_and_wlvj:
         self.datadriven_alpha_WJets_counting=-1;
 
         ### uncertainty for datacard
-#        self.lumi_uncertainty      = 0.046;
+        #self.lumi_uncertainty      = 0.046;
         self.lumi_uncertainty      = 0.027; # updated feb 22 for Moriond
         #self.XS_STop_uncertainty = 0.30 ;
         #self.XS_VV_uncertainty   = 0.25 ;
-        #self.XS_TTbar_NLO_uncertainty = 0.063 ;# from AN-12-368 table8
+        self.XS_TTbar_NLO_uncertainty = 0.063 ;# from AN-12-368 table8 MATTEO_CHANGED
         self.XS_STop_NLO_uncertainty  = 0.05 ;# from AN-12-368 table8
         self.XS_VV_NLO_uncertainty    = 0.03 ;# from AN-12-368 table8
-#        self.XS_sig_NNLO_uncertainty  = 0.00 ;
+        #self.XS_sig_NNLO_uncertainty  = 0.00 ;
 
         #el and mu trigger and eff uncertainty, AN2012_368_v5 12.3
         self.lep_trigger_uncertainty = 0.03;
@@ -291,11 +411,11 @@ class doFit_wj_and_wlvj:
         self.eff_vtag_mass_sf = 0.;
 
         self.uncertainties(self.signal_sample)
-#	self.xs_rescale = 0.01 
-	self.xs_rescale = 1.
+        #self.xs_rescale = 0.01 
+        self.xs_rescale = 1.
         if (self.interpolate):
             self.xs_rescale = 1.
-	                            
+                            
         #### sigma and mean signal systematic inflation
         self.mean_signal_uncertainty_jet_scale  = 0.013 ;
         self.mean_signal_uncertainty_lep_scale  = 0.001 ;
@@ -313,8 +433,10 @@ class doFit_wj_and_wlvj:
     
                                                                 
         # shape parameter uncertainty
-        self.FloatingParams=RooArgList("floatpara_list");
-
+        self.FloatingParams=RooArgList("floatpara_list");   
+    
+    
+    
     def uncertainties(self,label_tstring):
     
        self.signal_jet_energy_scale_uncertainty_up = -0.018
@@ -324,7 +446,7 @@ class doFit_wj_and_wlvj:
         if l.find('mass') != -1: continue
         if l.split(' ')[0].find(label_tstring) != -1:
          self.signal_jet_energy_scale_uncertainty_up = float(l.split(' ')[1])/100. 
-	 self.signal_jet_energy_scale_uncertainty_down = float(l.split(' ')[2])/100.
+       self.signal_jet_energy_scale_uncertainty_down = float(l.split(' ')[2])/100.
        infile.close()
        
        self.signal_jet_mass_scale_uncertainty_up = -0.035
@@ -334,7 +456,7 @@ class doFit_wj_and_wlvj:
         if l.find('mass') != -1: continue
         if l.split(' ')[0].find(label_tstring) != -1:
          self.signal_jet_mass_scale_uncertainty_up = float(l.split(' ')[1])/100. 
-	 self.signal_jet_mass_scale_uncertainty_down = float(l.split(' ')[2])/100.
+       self.signal_jet_mass_scale_uncertainty_down = float(l.split(' ')[2])/100.
        infile.close()
 
        self.signal_jet_mass_res_uncertainty_up = 0.006
@@ -344,7 +466,7 @@ class doFit_wj_and_wlvj:
         if l.find('mass') != -1: continue
         if l.split(' ')[0].find(label_tstring) != -1:
          self.signal_jet_mass_res_uncertainty_up = float(l.split(' ')[1])/100. 
-	 self.signal_jet_mass_res_uncertainty_down = float(l.split(' ')[2])/100.
+       self.signal_jet_mass_res_uncertainty_down = float(l.split(' ')[2])/100.
        infile.close()
 
        self.signal_xsec_NNLO_uncertainty = 0.17 # scale = 11%, PDF 13% at 1000 GeV
@@ -395,7 +517,7 @@ class doFit_wj_and_wlvj:
         
         for obj in range(int(plot.numItems()) ):
           objName = plot.nameOf(obj);
-	  #if objName.find("TPave") != -1: continue
+          #if objName.find("TPave") != -1: continue
           if objName == "errorband" : objName = "Uncertainty";
           print objName;
           if not ( ( (plot.getInvisible(objName)) and (not TString(objName).Contains("Uncertainty")) ) or TString(objName).Contains("invisi") or TString(objName).Contains("TLine") or 
@@ -437,7 +559,7 @@ objName ==objName_before ):
 
         for obj in range(int(plot.numItems()) ):
             objName = plot.nameOf(obj);
-	    if objName.find("TPave") != -1: continue
+            if objName.find("TPave") != -1: continue
             if objName == "errorband" : objName = "Uncertainty";
             print objName;
             if not ( ( (plot.getInvisible(objName)) and (not TString(objName).Contains("Uncertainty")) ) or TString(objName).Contains("invisi") or TString(objName).Contains("TLine") or objName ==objName_before ):
@@ -563,7 +685,7 @@ objName ==objName_before ):
        
        ### MATTEO ADDED. 
        ### The luminosity is expressed in pb. Is a float.
-       lumi_val=self.luminosity;
+       lumi_val=Luminosity_float_value;
        lumi_print_scale_factor=1000.;
        tmp_lumi_val= lumi_val/lumi_print_scale_factor;
        
@@ -635,17 +757,17 @@ objName ==objName_before ):
         #banner = self.banner4Plot();
         #banner.Draw();
 
-	cMassFit.Update()
-	cMassFit.cd()
-	CMS_lumi.CMS_lumi(cMassFit, 4, 11)	
-	cMassFit.cd()
-	cMassFit.Update()
-	cMassFit.RedrawAxis()
-	frame = cMassFit.GetFrame()
-	frame.Draw()   
-	cMassFit.cd()
-	cMassFit.Update()
-	        
+        cMassFit.Update()
+        cMassFit.cd()
+        CMS_lumi.CMS_lumi(cMassFit, 4, 11)
+        cMassFit.cd()
+        cMassFit.Update()
+        cMassFit.RedrawAxis()
+        frame = cMassFit.GetFrame()
+        frame.Draw()   
+        cMassFit.cd()
+        cMassFit.Update()
+       
         Directory=TString(in_directory+self.signal_sample); #+"_%02d_%02d/"%(options.cprime,options.BRnew));
         if not Directory.EndsWith("/"):Directory=Directory.Append("/");
         if not os.path.isdir(Directory.Data()):
@@ -710,10 +832,10 @@ objName ==objName_before ):
     def draw_canvas_with_pull(self, rrv_x, datahist, mplot, mplot_pull,ndof,parameters_list,in_directory, in_file_name, in_model_name="", show_constant_parameter=0, logy=0,ismj=0,isPull=0):# mplot + pull
 
         print "############### draw the canvas with pull ########################" 
-	#hist_ = datahist.createHistogram(rrv_x.GetName(),int(rrv_x.getBins()/self.narrow_factor))
+        #hist_ = datahist.createHistogram(rrv_x.GetName(),int(rrv_x.getBins()/self.narrow_factor))
         #chi2_ = self.calculate_chi2(datahist,rrv_x,mplot,ndof,ismj)
-	mplot.GetXaxis().SetTitle("")
-	#mplot.GetXaxis().SetTitleOffset(1.1);
+        mplot.GetXaxis().SetTitle("")
+        #mplot.GetXaxis().SetTitleOffset(1.1);
         #mplot.GetYaxis().SetTitleOffset(1.3);
         #mplot.GetXaxis().SetTitleSize(0.055);
         #mplot.GetYaxis().SetTitleSize(0.055);
@@ -722,12 +844,12 @@ objName ==objName_before ):
         mplot.GetYaxis().SetTitleSize(0.07)
         mplot.GetYaxis().SetTitleOffset(0.9)
         mplot.GetYaxis().SetLabelSize(0.06)
-	mplot.GetXaxis().SetLabelSize(0);
+        mplot.GetXaxis().SetLabelSize(0);
         #mplot_pull.GetXaxis().SetLabelSize(0.14);
         #mplot_pull.GetYaxis().SetLabelSize(0.14);
         #mplot_pull.GetYaxis().SetTitleSize(0.15);
         #mplot_pull.GetYaxis().SetNdivisions(205);
-	
+  
         cMassFit = self.get_canvas("cMassFit")#TCanvas("cMassFit","cMassFit", 600,600);
         # if parameters_list is empty, don't draw pad3
         par_first=parameters_list.createIterator();
@@ -745,38 +867,38 @@ objName ==objName_before ):
          pad1=TPad("pad1","pad1",0.,0. ,1,0.30); #pad1 - pull
          pad2=TPad("pad2","pad2",0.,0.3,1.,1. ); #pad0
 
-   	 pad2.SetRightMargin(0.1);
-   	 pad2.SetTopMargin(0.1);
-   	 pad2.SetBottomMargin(0.0001);
-   	 pad1.SetRightMargin(0.1)
-   	 pad1.SetTopMargin(0)
-   	 pad1.SetBottomMargin(0.4)   
-	 #pad1.SetRightMargin(0.05)
-	 #pad2.SetRightMargin(0.05)
-         pad1.Draw();
-         pad2.Draw();
+        pad2.SetRightMargin(0.1);
+        pad2.SetTopMargin(0.1);
+        pad2.SetBottomMargin(0.0001);
+        pad1.SetRightMargin(0.1)
+        pad1.SetTopMargin(0)
+        pad1.SetBottomMargin(0.4)   
+        #pad1.SetRightMargin(0.05)
+        #pad2.SetRightMargin(0.05)
+        pad1.Draw();
+        pad2.Draw();
                                                                                                                                                                               
         pad2.cd();
-	
-	'''	
-	if ismj:
-	 pt = ROOT.TPaveText(0.6243719,0.4080919,0.8756281,0.547952,"NDC")
-	 pt.SetTextSize(0.03746254)
-	else:
-	 pt = ROOT.TPaveText(0.5175879,0.7152847,0.8027638,0.8551449,"NDC")
-	 pt.SetTextSize(0.054)
-	 
-	pt.SetTextFont(62)	
-	pt.SetTextAlign(12)
-	pt.SetFillColor(0)
-	pt.SetBorderSize(0)
-	pt.SetFillStyle(0)
-	text = pt.AddText("#chi^2/d.o.f = %.2f/%i = %.2f" %(chi2_[0],chi2_[1],chi2_[0]/chi2_[1]))
-	text.SetTextFont(62)
-	'''
-	
+
+        '''
+if ismj:
+ pt = ROOT.TPaveText(0.6243719,0.4080919,0.8756281,0.547952,"NDC")
+ pt.SetTextSize(0.03746254)
+else:
+ pt = ROOT.TPaveText(0.5175879,0.7152847,0.8027638,0.8551449,"NDC")
+ pt.SetTextSize(0.054)
+ 
+pt.SetTextFont(62)
+pt.SetTextAlign(12)
+pt.SetFillColor(0)
+pt.SetBorderSize(0)
+pt.SetFillStyle(0)
+text = pt.AddText("#chi^2/d.o.f = %.2f/%i = %.2f" %(chi2_[0],chi2_[1],chi2_[0]/chi2_[1]))
+text.SetTextFont(62)
+        '''
+
         mplot.Draw();
-	#pt.Draw()
+        #pt.Draw()
 
         #banner = self.banner4Plot(1);
         #banner.Draw();
@@ -794,9 +916,9 @@ objName ==objName_before ):
 #        for ipoint in range(1,errorband_pull->GetN()):
 
         medianLine = TLine(mplot.GetXaxis().GetXmin(),0.,mplot.GetXaxis().GetXmax(),0); medianLine.SetLineWidth(2); medianLine.SetLineColor(kRed);
-	medianLine.Draw()
-	mplot_pull.Draw("Psame");
-	
+        medianLine.Draw()
+        mplot_pull.Draw("Psame");
+
         if param_first and doParameterPlot != 0:
 
             pad3.cd();
@@ -816,17 +938,17 @@ objName ==objName_before ):
                     i=i+1;
                 param=par.Next();
 
-	cMassFit.Update()
-	pad2.cd()
-	CMS_lumi.CMS_lumi(pad2, 4, 11)	
-	pad2.cd()
-	pad2.Update()
-	pad2.RedrawAxis()
-	frame = pad2.GetFrame()
-	frame.Draw()   
-	cMassFit.cd()
-	cMassFit.Update()
-			
+        cMassFit.Update()
+        pad2.cd()
+        CMS_lumi.CMS_lumi(pad2, 4, 11)
+        pad2.cd()
+        pad2.Update()
+        pad2.RedrawAxis()
+        frame = pad2.GetFrame()
+        frame.Draw()   
+        cMassFit.cd()
+        cMassFit.Update()
+
         ## create the directory where store the plots
         Directory = TString(in_directory+self.signal_sample);
         if not Directory.EndsWith("/"):Directory = Directory.Append("/");
@@ -836,19 +958,21 @@ objName ==objName_before ):
         rlt_file = TString(Directory.Data()+in_file_name);
         if rlt_file.EndsWith(".root"):
             TString(in_model_name).ReplaceAll(".root","");
-            rlt_file.ReplaceAll(".root","_"+in_model_name+"_with_pull.png");
+            rlt_file.ReplaceAll(".root","_"+in_model_name+"_with_pull.pdf");
         else:
             TString(in_model_name).ReplaceAll(".root","");
             rlt_file.ReplaceAll(".root","");
-            rlt_file=rlt_file.Append("_"+in_model_name+"_with_pull.png");
+            rlt_file=rlt_file.Append("_"+in_model_name+"_with_pull.pdf");
 
         cMassFit.SaveAs(rlt_file.Data());
 
-        rlt_file.ReplaceAll(".png",".pdf");
-        cMassFit.SaveAs(rlt_file.Data());
-        
         rlt_file.ReplaceAll(".pdf",".root");
         cMassFit.SaveAs(rlt_file.Data());
+        
+        rlt_file.ReplaceAll(".root",".png");
+        cMassFit.SaveAs(rlt_file.Data());
+        
+        
 
         string_file_name = TString(in_file_name);
         if string_file_name.EndsWith(".root"):
@@ -875,10 +999,10 @@ objName ==objName_before ):
     def draw_canvas_with_pull2(self, rrv_x, datahist, mplot, mplotP, mplot_pull,ndof,parameters_list,in_directory, in_file_name, in_model_name="", show_constant_parameter=0, logy=0,ismj=0,isPull=0):# mplot + pull
 
         print "############### draw the canvas with pull ########################" 
-	#hist_ = datahist.createHistogram(rrv_x.GetName(),int(rrv_x.getBins()/self.narrow_factor))
+        #hist_ = datahist.createHistogram(rrv_x.GetName(),int(rrv_x.getBins()/self.narrow_factor))
         chi2_ = self.calculate_chi2(datahist,rrv_x,mplot,ndof,ismj)
-	mplot.GetXaxis().SetTitle("")
-	#mplot.GetXaxis().SetTitleOffset(1.1);
+        mplot.GetXaxis().SetTitle("")
+        #mplot.GetXaxis().SetTitleOffset(1.1);
         #mplot.GetYaxis().SetTitleOffset(1.3);
         #mplot.GetXaxis().SetTitleSize(0.055);
         #mplot.GetYaxis().SetTitleSize(0.055);
@@ -887,12 +1011,12 @@ objName ==objName_before ):
         mplot.GetYaxis().SetTitleSize(0.07)
         mplot.GetYaxis().SetTitleOffset(0.9)
         mplot.GetYaxis().SetLabelSize(0.06)
-	mplot.GetXaxis().SetLabelSize(0);
+        mplot.GetXaxis().SetLabelSize(0);
         #mplot_pull.GetXaxis().SetLabelSize(0.14);
         #mplot_pull.GetYaxis().SetLabelSize(0.14);
         #mplot_pull.GetYaxis().SetTitleSize(0.15);
         #mplot_pull.GetYaxis().SetNdivisions(205);
-	
+
         cMassFit = self.get_canvas("cMassFit")#TCanvas("cMassFit","cMassFit", 600,600);
         # if parameters_list is empty, don't draw pad3
         par_first=parameters_list.createIterator();
@@ -910,38 +1034,38 @@ objName ==objName_before ):
          pad1=TPad("pad1","pad1",0.,0. ,1,0.30); #pad1 - pull
          pad2=TPad("pad2","pad2",0.,0.3,1.,1. ); #pad0
 
-   	 pad2.SetRightMargin(0.1);
-   	 pad2.SetTopMargin(0.1);
-   	 pad2.SetBottomMargin(0.0001);
-   	 pad1.SetRightMargin(0.1)
-   	 pad1.SetTopMargin(0)
-   	 pad1.SetBottomMargin(0.4)   
-	 #pad1.SetRightMargin(0.05)
-	 #pad2.SetRightMargin(0.05)
-         pad1.Draw();
-         pad2.Draw();
+        pad2.SetRightMargin(0.1);
+        pad2.SetTopMargin(0.1);
+        pad2.SetBottomMargin(0.0001);
+        pad1.SetRightMargin(0.1)
+        pad1.SetTopMargin(0)
+        pad1.SetBottomMargin(0.4)   
+        #pad1.SetRightMargin(0.05)
+        #pad2.SetRightMargin(0.05)
+        pad1.Draw();
+        pad2.Draw();
                                                                                                                                                                               
         pad2.cd();
-	
-		
-	if ismj:
-	 pt = ROOT.TPaveText(0.6243719,0.4080919,0.8756281,0.547952,"NDC")
-	 pt.SetTextSize(0.03746254)
-	else:
-	 pt = ROOT.TPaveText(0.5175879,0.7152847,0.8027638,0.8551449,"NDC")
-	 pt.SetTextSize(0.054)
-	 
-	pt.SetTextFont(62)	
-	pt.SetTextAlign(12)
-	pt.SetFillColor(0)
-	pt.SetBorderSize(0)
-	pt.SetFillStyle(0)
-	text = pt.AddText("#chi^2/d.o.f = %.2f/%i = %.2f" %(chi2_[0],chi2_[1],chi2_[0]/chi2_[1]))
-	text.SetTextFont(62)
-	
-	
+
+
+        if ismj:
+         pt = ROOT.TPaveText(0.6243719,0.4080919,0.8756281,0.547952,"NDC")
+         pt.SetTextSize(0.03746254)
+        else:
+         pt = ROOT.TPaveText(0.5175879,0.7152847,0.8027638,0.8551449,"NDC")
+         pt.SetTextSize(0.054)
+ 
+        pt.SetTextFont(62)
+        pt.SetTextAlign(12)
+        pt.SetFillColor(0)
+        pt.SetBorderSize(0)
+        pt.SetFillStyle(0)
+        text = pt.AddText("#chi^2/d.o.f = %.2f/%i = %.2f" %(chi2_[0],chi2_[1],chi2_[0]/chi2_[1]))
+        text.SetTextFont(62)
+
+
         mplot.Draw();
-	#pt.Draw()
+        #pt.Draw()
 
         #banner = self.banner4Plot(1);
         #banner.Draw();
@@ -950,9 +1074,9 @@ objName ==objName_before ):
         mplot_pull.Draw("AP");
         mplotP.Draw("same");
         medianLine = TLine(mplot.GetXaxis().GetXmin(),0.,mplot.GetXaxis().GetXmax(),0); medianLine.SetLineWidth(2); medianLine.SetLineColor(kRed);
-	medianLine.Draw()
-	mplot_pull.Draw("Psame");
-	
+        medianLine.Draw()
+        mplot_pull.Draw("Psame");
+
         if param_first and doParameterPlot != 0:
 
             pad3.cd();
@@ -972,17 +1096,17 @@ objName ==objName_before ):
                     i=i+1;
                 param=par.Next();
 
-	cMassFit.Update()
-	pad2.cd()
-	CMS_lumi.CMS_lumi(pad2, 4, 11)	
-	pad2.cd()
-	pad2.Update()
-	pad2.RedrawAxis()
-	frame = pad2.GetFrame()
-	frame.Draw()   
-	cMassFit.cd()
-	cMassFit.Update()
-			
+        cMassFit.Update()
+        pad2.cd()
+        CMS_lumi.CMS_lumi(pad2, 4, 11)
+        pad2.cd()
+        pad2.Update()
+        pad2.RedrawAxis()
+        frame = pad2.GetFrame()
+        frame.Draw()   
+        cMassFit.cd()
+        cMassFit.Update()
+
         ## create the directory where store the plots
         Directory = TString(in_directory+self.signal_sample);
         if not Directory.EndsWith("/"):Directory = Directory.Append("/");
@@ -1032,33 +1156,33 @@ objName ==objName_before ):
         pulls = array('d',[])
         print "############### calculate chi2 (new) ########################"
         hpull = mplot_orig.pullHist();
-	bins = 0
-	bins_ = 0
+        bins = 0
+        bins_ = 0
         x = ROOT.Double(0.); y = ROOT.Double(0) ;
         for ipoint in range(0,hpull.GetN()):
           hpull.GetPoint(ipoint,x,y);
-	  hist.get(bins_)
-	  hist.weightError(RooAbsData.SumW2)
-	  print x,y,bins_,hist.get(bins_).getRealValue(rrv_x.GetName()),hist.weight(),hist.weightError(RooAbsData.SumW2)
-	  if hist.weight() != 0: pulls.append(y)
-	  #print x,y,hist.GetBinCenter(bins_),hist.GetBinContent(bins_)
+          hist.get(bins_)
+          hist.weightError(RooAbsData.SumW2)
+          print x,y,bins_,hist.get(bins_).getRealValue(rrv_x.GetName()),hist.weight(),hist.weightError(RooAbsData.SumW2)
+          if hist.weight() != 0: pulls.append(y)
+          #print x,y,hist.GetBinCenter(bins_),hist.GetBinContent(bins_)
           #if not(ismj) and y != 0 and TMath.Abs(y) < 4: pulls.append(y)
-	  #elif ismj and y != 0 and (x < 65 or x > 135):
-	  # pulls.append(y) 
+          #elif ismj and y != 0 and (x < 65 or x > 135):
+          # pulls.append(y) 
           # bins+=1
-	  #else: print "Bin %f is empty!" %x 
-	  bins_+=1
-	  
-	chi2 = 0
-	for p in pulls:
-	 chi2+=(p*p)
-	 
-	#if ismj:
-	# ndof = ndof - (hpull.GetN()-bins) 
-	# print hpull.GetN(),bins,ndof
-	print "Chi2/ndof = %f/%f = %f" %(chi2,ndof,chi2/ndof)
-	return chi2,ndof
-	       
+          #else: print "Bin %f is empty!" %x 
+          bins_+=1
+ 
+        chi2 = 0
+        for p in pulls:
+         chi2+=(p*p)
+ 
+        #if ismj:
+        # ndof = ndof - (hpull.GetN()-bins) 
+        # print hpull.GetN(),bins,ndof
+        print "Chi2/ndof = %f/%f = %f" %(chi2,ndof,chi2/ndof)
+        return chi2,ndof
+       
     ### in order to get the pull
     def get_pull(self, rrv_x, mplot_orig):
 
@@ -1067,36 +1191,36 @@ objName ==objName_before ):
         x = ROOT.Double(0.); y = ROOT.Double(0) ;
         for ipoint in range(0,hpull.GetN()):
           hpull.GetPoint(ipoint,x,y);
-	  #print x,y
+        #print x,y
           if(y == 0):
            hpull.SetPoint(ipoint,x,10)
        
-   	gt = ROOT.TH1F("gt","gt",int(rrv_x.getBins()/self.narrow_factor),rrv_x.getMin(),rrv_x.getMax());
-   	gt.SetMinimum(-3.999);
-   	gt.SetMaximum(3.999);
-   	gt.SetDirectory(0);
-   	gt.SetStats(0);
-   	gt.SetLineStyle(0);
-   	gt.SetMarkerStyle(20);
-   	gt.GetXaxis().SetTitle(rrv_x.GetTitle());
-   	gt.GetXaxis().SetLabelFont(42);
-   	gt.GetXaxis().SetLabelOffset(0.02);
-   	gt.GetXaxis().SetLabelSize(0.15);
-   	gt.GetXaxis().SetTitleSize(0.15);
-   	gt.GetXaxis().SetTitleOffset(1.2);
-   	gt.GetXaxis().SetTitleFont(42);
-   	gt.GetYaxis().SetTitle("#frac{Data-Fit}{#sigma_{data}}");
-   	gt.GetYaxis().CenterTitle(True);
-   	gt.GetYaxis().SetNdivisions(205);
-   	gt.GetYaxis().SetLabelFont(42);
-   	gt.GetYaxis().SetLabelOffset(0.007);
-   	gt.GetYaxis().SetLabelSize(0.15);
-   	gt.GetYaxis().SetTitleSize(0.15);
-   	gt.GetYaxis().SetTitleOffset(0.35);
-   	gt.GetYaxis().SetTitleFont(42);
-   	#gt.GetXaxis().SetNdivisions(505)
-	hpull.SetHistogram(gt)
-	return hpull
+        gt = ROOT.TH1F("gt","gt",int(rrv_x.getBins()/self.narrow_factor),rrv_x.getMin(),rrv_x.getMax());
+        gt.SetMinimum(-3.999);
+        gt.SetMaximum(3.999);
+        gt.SetDirectory(0);
+        gt.SetStats(0);
+        gt.SetLineStyle(0);
+        gt.SetMarkerStyle(20);
+        gt.GetXaxis().SetTitle(rrv_x.GetTitle());
+        gt.GetXaxis().SetLabelFont(42);
+        gt.GetXaxis().SetLabelOffset(0.02);
+        gt.GetXaxis().SetLabelSize(0.15);
+        gt.GetXaxis().SetTitleSize(0.15);
+        gt.GetXaxis().SetTitleOffset(1.2);
+        gt.GetXaxis().SetTitleFont(42);
+        gt.GetYaxis().SetTitle("#frac{Data-Fit}{#sigma_{data}}");
+        gt.GetYaxis().CenterTitle(True);
+        gt.GetYaxis().SetNdivisions(205);
+        gt.GetYaxis().SetLabelFont(42);
+        gt.GetYaxis().SetLabelOffset(0.007);
+        gt.GetYaxis().SetLabelSize(0.15);
+        gt.GetYaxis().SetTitleSize(0.15);
+        gt.GetYaxis().SetTitleOffset(0.35);
+        gt.GetYaxis().SetTitleFont(42);
+        #gt.GetXaxis().SetNdivisions(505)
+        hpull.SetHistogram(gt)
+        return hpull
         #mplot_pull = rrv_x.frame(RooFit.Title("Pull Distribution"), RooFit.Bins(int(rrv_x.getBins()/self.narrow_factor)));
         #medianLine = TLine(rrv_x.getMin(),0.,rrv_x.getMax(),0); medianLine.SetLineWidth(2); medianLine.SetLineColor(kRed);
         #mplot_pull.addObject(medianLine);
@@ -1170,7 +1294,7 @@ objName ==objName_before ):
     def get_VV_mlvj_Model(self, mlvj_region="_signal_region"):
         print "########### Fixing VV mlvj for the region",mlvj_region,"  ############"
         return self.get_General_mlvj_Model("_VV_xww",mlvj_region);
-	
+
     ### get an mj model from the workspace givin the label
     def get_mj_Model(self,label):
         return self.workspace4fit_.pdf("model"+label+"_"+self.channel+"_mj")
@@ -1290,12 +1414,13 @@ objName ==objName_before ):
             rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.channel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.channel+"_"+self.wtagger_label,g_alpha1.Eval(int(options.mass)));
 
             #set parameters of the CB to the interpolated value
-#            rrv_mean_CB.setVal(g_mean.Eval(int(options.mass))); 
-#            rrv_sigma_CB.setVal(g_sigma.Eval(int(options.mass))); 
-#            rrv_n1_CB.setVal(g_n1.Eval(int(options.mass))); 
-#            rrv_n2_CB.setVal(g_n2.Eval(int(options.mass))); 
-#            rrv_alpha1_CB.setVal(g_alpha1.Eval(int(options.mass))); 
-#            rrv_alpha2_CB.setVal(g_alpha2.Eval(int(options.mass))); 
+            # MATTEO_CHANGED
+            rrv_mean_CB.setVal(g_mean.Eval(int(options.mass))); 
+            rrv_sigma_CB.setVal(g_sigma.Eval(int(options.mass))); 
+            rrv_n1_CB.setVal(g_n1.Eval(int(options.mass))); 
+            rrv_n2_CB.setVal(g_n2.Eval(int(options.mass))); 
+            rrv_alpha1_CB.setVal(g_alpha1.Eval(int(options.mass))); 
+            rrv_alpha2_CB.setVal(g_alpha2.Eval(int(options.mass))); 
 
             rrv_mean_CB.Print()
             rrv_sigma_CB.Print()
@@ -1630,22 +1755,22 @@ objName ==objName_before ):
 
             print "########### ExpN funtion for W+jets mlvj ############"
 #            rrv_c_ExpN = RooRealVar("rrv_c_ExpN"+label+"_"+self.channel,"rrv_c_ExpN"+label+"_"+self.channel,-3e-3,-1e-1,-1e-5);
-#	    rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, 100, 1e4);
+#    rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, 100, 1e4);
 #            rrv_c_ExpN = RooRealVar("rrv_c_ExpN"+label+"_"+self.channel,"rrv_c_ExpN"+label+"_"+self.channel,-3e-3,-1e-1,-1e-5);
 #            rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, -1e2, 1e4);
             rrv_c_ExpN = RooRealVar("rrv_c_ExpN"+label+"_"+self.channel,"rrv_c_ExpN"+label+"_"+self.channel,-5.32e-3,-1e-1,-1e-6);
             rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, -64.3, -1e4, 1e5);
-#	    if rrv_x.getMin() == 700:3
-#	       rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 0, -10000, 10000);	       
+#    if rrv_x.getMin() == 700:3
+#       rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 0, -10000, 10000);       
             #if(ismc==1):
-            #  rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, -1e2, 1e4);	
-            #else :	    
+            #  rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, -1e2, 1e4);
+            #else :
             #  if self.channel == "el" :
             #     rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, -1e2, 1e4);
             #  elif self.wtagger_label == "LP" :
             #     rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 1e3, -1e2, 1e4);
             #  else:
-            #     rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 5e2, 0, 1e3);		 
+            #     rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.channel,"rrv_n_ExpN"+label+"_"+self.channel, 5e2, 0, 1e3);
 
             model_pdf = ROOT.RooExpNPdf("model_pdf"+label+"_"+self.channel+mass_spectrum,"model_pdf"+label+"_"+self.channel+mass_spectrum,rrv_x,rrv_c_ExpN, rrv_n_ExpN);
                                                                                                              
@@ -1683,9 +1808,9 @@ objName ==objName_before ):
                      rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.channel,"rrv_s_ExpTail"+label+"_"+self.channel, 161,40,280);
                      rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.channel,"rrv_a_ExpTail"+label+"_"+self.channel, 8e-3,-1e-2,1.3e-1);    
       
-      	    print "HERE I AM"
-	    rrv_s_ExpTail.Print()     
-	    rrv_a_ExpTail.Print()     
+            print "HERE I AM"
+            rrv_s_ExpTail.Print()     
+            rrv_a_ExpTail.Print()     
             model_pdf     = ROOT.RooExpTailPdf("model_pdf"+label+"_"+self.channel+mass_spectrum,"model_pdf"+label+"_"+self.channel+mass_spectrum,rrv_x,rrv_s_ExpTail, rrv_a_ExpTail);
 
         ## sum of two exponential 
@@ -1793,7 +1918,7 @@ objName ==objName_before ):
             print "########### 2Gaus +2Gaus for mj fit  ############"
             mean1_tmp      = 8.3141e+01; mean1_tmp_err      = 1.63e-01;
             #mean1_tmp      = 7.3141e+01; mean1_tmp_err      = 1.63e-01; @@@ JEN            
-	    deltamean_tmp  = 6.9129e+00; deltamean_tmp_err  = 1.24e+00;
+            deltamean_tmp  = 6.9129e+00; deltamean_tmp_err  = 1.24e+00;
 #            sigma1_tmp     = 7.5145e+00; sigma1_tmp_err     = 1.99e-01;
             scalesigma_tmp = 3.6819e+00; scalesigma_tmp_err = 2.11e-01;
             frac_tmp       = 6.7125e-01; frac_tmp_err       = 2.09e-02;
@@ -1984,7 +2109,7 @@ objName ==objName_before ):
 
         #### Decorrelate the parameters in order to have a proper shape in the workspace
         wsfit_tmp = RooWorkspace("wsfit_tmp%s_sb_lo_from_fitting_mlvj"%(label));
-	purity = self.wtagger_label[0]+self.wtagger_label[1]
+        purity = self.wtagger_label[0]+self.wtagger_label[1]
         Deco      = PdfDiagonalizer("Deco%s_sb_lo_from_fitting_%s_%s_mlvj_13TeV"%(label,self.channel,purity),wsfit_tmp,rfresult);
         print"#################### diagonalize data sideband fit "
         model_pdf_WJets_deco = Deco.diagonalize(model_pdf_WJets);
@@ -2064,15 +2189,13 @@ objName ==objName_before ):
 #LUCA
         if (interpolate==0):            
             if not self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj"):
-                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+
-                                                                self.channel+"_mlvj", rrv_tmp.getVal()*signalInt_val );
+                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj", rrv_tmp.getVal()*signalInt_val );
                 getattr(self.workspace4fit_,"import")(rrv_number_fitting_signal_region_mlvj);
             else :
                 self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj").setVal(rrv_tmp.getVal()*signalInt_val);
 
         else:
-                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+
-                                                                self.channel+"_mlvj", rrv_tmp.getVal() );
+                rrv_number_fitting_signal_region_mlvj = RooRealVar("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj","rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj", rrv_tmp.getVal() );
                 getattr(self.workspace4fit_,"import")(rrv_number_fitting_signal_region_mlvj);
 
         self.workspace4fit_.var("rrv_number_fitting_signal_region"+label+"_"+self.channel+"_mlvj").Print();
@@ -2444,7 +2567,7 @@ objName ==objName_before ):
         self.file_out.write( "\nEvents Number in sideband_high from dataset:%s"%(self.workspace4fit_.var("rrv_number_dataset_sb_hi"+label+"_"+self.channel+"_mj").getVal() ) )
         self.file_out.write( "\nTotal Number in sidebands from dataset:%s"%(self.workspace4fit_.var("rrv_number_dataset_sb_lo"+label+"_"+self.channel+"_mj").getVal()+ self.workspace4fit_.var("rrv_number_dataset_sb_hi"+label+"_"+self.channel+"_mj").getVal() ) )
         if (self.workspace4fit_.var("rrv_number_dataset_sb_lo"+label+"_"+self.channel+"_mj").getVal()+self.workspace4fit_.var("rrv_number_dataset_sb_hi"+label+"_"+self.channel+"_mj").getVal()) != 0:
-	   self.file_out.write( "\nRatio signal_region/sidebands from dataset:%s"%(self.workspace4fit_.var("rrv_number_dataset_signal_region"+label+"_"+self.channel+"_mj").getVal()/(self.workspace4fit_.var("rrv_number_dataset_sb_lo"+label+"_"+self.channel+"_mj").getVal()+ self.workspace4fit_.var("rrv_number_dataset_sb_hi"+label+"_"+self.channel+"_mj").getVal()) ) )
+           self.file_out.write( "\nRatio signal_region/sidebands from dataset:%s"%(self.workspace4fit_.var("rrv_number_dataset_signal_region"+label+"_"+self.channel+"_mj").getVal()/(self.workspace4fit_.var("rrv_number_dataset_sb_lo"+label+"_"+self.channel+"_mj").getVal()+ self.workspace4fit_.var("rrv_number_dataset_sb_hi"+label+"_"+self.channel+"_mj").getVal()) ) )
 
         self.file_out.write( "\nEvents Number in sideband_low from fitting:%s"%(rrv_tmp.getVal()*sb_loInt_val) )
         self.file_out.write( "\nEvents Number in Signal Region from fitting:%s"%(rrv_tmp.getVal()*signalInt_val) )
@@ -2557,7 +2680,7 @@ objName ==objName_before ):
             ## plot solid style 
             model_data.plotOn(mplot,RooFit.Name("VV"), RooFit.Components("model%s_%s_mj,model_STop_xww_%s_mj,model_TTbar_xww_%s_mj,model_VV_xww_%s_mj"%(label,self.channel,self.channel,self.channel,self.channel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack),RooFit.NormRange("sb_lo,sb_hi"), RooFit.VLines());
             
-	    model_data.plotOn(mplot,RooFit.Name("TTbar"), RooFit.Components("model%s_%s_mj,model_STop_xww_%s_mj,model_TTbar_xww_%s_mj"%(label,self.channel,self.channel,self.channel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack),RooFit.NormRange("sb_lo,sb_hi"), RooFit.VLines());
+            model_data.plotOn(mplot,RooFit.Name("TTbar"), RooFit.Components("model%s_%s_mj,model_STop_xww_%s_mj,model_TTbar_xww_%s_mj"%(label,self.channel,self.channel,self.channel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack),RooFit.NormRange("sb_lo,sb_hi"), RooFit.VLines());
 
             model_data.plotOn(mplot,RooFit.Name("STop"), RooFit.Components("model%s_%s_mj,model_STop_xww_%s_mj"%(label,self.channel,self.channel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["STop"]), RooFit.LineColor(kBlack),RooFit.NormRange("sb_lo,sb_hi"), RooFit.VLines());
 
@@ -2608,47 +2731,47 @@ objName ==objName_before ):
 #            middleLine = TLine(85,0.,85,mplot.GetMaximum()*0.9); middleLine.SetLineWidth(2); middleLine.SetLineColor(kBlack); middleLine.SetLineStyle(9);
             upperLine = TLine(95,0.,95,mplot.GetMaximum()*0.9); upperLine.SetLineWidth(2); upperLine.SetLineColor(kBlack); upperLine.SetLineStyle(9);
             mplot.addObject(lowerLine);
-#	    mplot.addObject(middleLine);
+#    mplot.addObject(middleLine);
             mplot.addObject(upperLine);
 
-#	    pt = ROOT.TPaveText(0.3592965,0.02847153,0.5728643,0.1008991,"NDC")
-#	    pt = ROOT.TPaveText(0.3592965,0.02847153,0.52,0.1008991,"NDC")
-	    pt = ROOT.TPaveText(0.3592965,0.02847153,0.50,0.1008991,"NDC")
-	    pt.SetTextFont(42)
-	    pt.SetTextSize(0.04995005)
-	    #pt.SetTextAlign(12)
-	    pt.SetFillColor(0)
-	    pt.SetBorderSize(0)
-	    text = pt.AddText("#leftarrow signal region #rightarrow")
-	    text.SetTextFont(62)
-	    mplot.addObject(pt);
+#    pt = ROOT.TPaveText(0.3592965,0.02847153,0.5728643,0.1008991,"NDC")
+#    pt = ROOT.TPaveText(0.3592965,0.02847153,0.52,0.1008991,"NDC")
+            pt = ROOT.TPaveText(0.3592965,0.02847153,0.50,0.1008991,"NDC")
+            pt.SetTextFont(42)
+            pt.SetTextSize(0.04995005)
+            #pt.SetTextAlign(12)
+            pt.SetFillColor(0)
+            pt.SetBorderSize(0)
+            text = pt.AddText("#leftarrow signal region #rightarrow")
+            text.SetTextFont(62)
+            mplot.addObject(pt);
 
-	    pt1 = ROOT.TPaveText(0.3555276,0.1183816,0.4535176,0.1908092,"NDC")
-	    pt1.SetTextFont(42)
-	    pt1.SetTextSize(0.037)
-	    #pt.SetTextAlign(12)
-	    pt1.SetFillColor(0)
-	    pt1.SetFillStyle(0)
-	    pt1.SetBorderSize(0)
-	    text = pt1.AddText("WW")
-	    text.SetTextFont(62)
-	    text = pt1.AddText("category")
-	    text.SetTextFont(62)
-#	    mplot.addObject(pt1);
+            pt1 = ROOT.TPaveText(0.3555276,0.1183816,0.4535176,0.1908092,"NDC")
+            pt1.SetTextFont(42)
+            pt1.SetTextSize(0.037)
+            #pt.SetTextAlign(12)
+            pt1.SetFillColor(0)
+            pt1.SetFillStyle(0)
+            pt1.SetBorderSize(0)
+            text = pt1.AddText("WW")
+            text.SetTextFont(62)
+            text = pt1.AddText("category")
+            text.SetTextFont(62)
+#    mplot.addObject(pt1);
 
-	    pt2 = ROOT.TPaveText(0.4723618,0.1183816,0.5678392,0.1908092,"NDC")
-	    pt2.SetTextFont(42)
-	    pt2.SetTextSize(0.037)
-	    #pt.SetTextAlign(12)
-	    pt2.SetFillColor(0)
-	    pt2.SetBorderSize(0)
-	    pt2.SetFillStyle(0)
-	    text = pt2.AddText("WZ")
-	    text.SetTextFont(62)
-	    text = pt2.AddText("category")
-	    text.SetTextFont(62)
-#	    mplot.addObject(pt2);
-	    	    
+            pt2 = ROOT.TPaveText(0.4723618,0.1183816,0.5678392,0.1908092,"NDC")
+            pt2.SetTextFont(42)
+            pt2.SetTextSize(0.037)
+            #pt.SetTextAlign(12)
+            pt2.SetFillColor(0)
+            pt2.SetBorderSize(0)
+            pt2.SetFillStyle(0)
+            text = pt2.AddText("WZ")
+            text.SetTextFont(62)
+            text = pt2.AddText("category")
+            text.SetTextFont(62)
+#    mplot.addObject(pt2);
+    
             ### legend of the plot
             self.leg = self.legend4Plot(mplot,0,1,0.,0.,0.13,0.02,1,0,1);
             #self.leg = self.legend4Plot(mplot,0,1,-0.10,-0.01,0.10,0.01);
@@ -2678,7 +2801,13 @@ objName ==objName_before ):
         fullInt_val = fullInt.getVal()
         signalInt_val = signalInt.getVal()/fullInt_val
         ## take the value from the fit (normalization) and multiply it from the ratio of the integrals
-        rrv_number_WJets_in_mj_signal_region_from_fitting = RooRealVar("rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),"rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal()*signalInt_val);
+        rrv_number_WJets_in_mj_signal_region_from_fitting = RooRealVar("rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),"rrv_number%s_in_mj_signal_region_from_fitting_%s"%(label,self.channel),((self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal())*signalInt_val));
+        print"\n\n----------------- MATTEO CHECK -----------------\n\n"
+        print "rrv_number%s_%s_mj: \t\t"%(label,self.channel)
+        print self.workspace4fit_.var("rrv_number%s_%s_mj"%(label,self.channel)).getVal()
+        print "rrv_number_WJets_in_mj_signal_region_from_fitting: \t\t %f"%(rrv_number_WJets_in_mj_signal_region_from_fitting.getVal())
+        print "signal instegral val: \t\t %f"%signalInt_val
+        print "\n\n-----------------------------------------------\n\n"
 
         #### Error on the normalization --> from a dedicated function taking into account shape uncertainty
         rrv_number_WJets_in_mj_signal_region_from_fitting.setError( Calc_error_extendPdf(rdataset_data_mj, model_WJets, rfresult,"signal_region") );
@@ -2706,10 +2835,23 @@ objName ==objName_before ):
         rrv_mass_lvj = self.workspace4fit_.var("rrv_mass_lvj")
         rdataset = self.workspace4fit_.data("rdataset4fit"+label+in_range+"_"+self.channel+"_mlvj");
         constrainslist =[];
-
+        
+        
+        
+        print "\n\n------------- MATTEO CHECK -----------------\n\n"
+        print "MAKE MODEL"
+        print "MODEL: \t%s"%mlvj_model
+        print "LABEL: \t%s"%label
+        print "RANGE: \t%s"%in_range
+        print "\n\n--------------------------------------------\n\n"
         ## make the extended pdf model
         model = self.make_Model(label+in_range,mlvj_model,"_mlvj",constrainslist,ismc);
-
+        
+        
+        
+        print "\n\n------------- MATTEO CHECK -----------------\n\n"
+        print "MAKE FIT"
+        print "\n\n--------------------------------------------\n\n"
         ## make the fit
         model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE) );
         rfresult = model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE), RooFit.Minimizer("Minuit2") );
@@ -2733,8 +2875,8 @@ objName ==objName_before ):
         print mplot.chiSquare();
         print "#################### JENchi2 nPar=%s, chiSquare=%s/%s"%(nPar ,mplot.chiSquare(nPar)*ndof, ndof );
         datahist = rdataset.binnedClone( rdataset.GetName()+"_binnedClone",rdataset.GetName()+"_binnedClone" )
-	rdataset.Print()
-	
+        rdataset.Print()
+
         ## get the pull 
         mplot_pull      = self.get_pull(rrv_mass_lvj,mplot);
         parameters_list = model.getParameters(rdataset);
@@ -2744,9 +2886,9 @@ objName ==objName_before ):
 
         '''
         for i in range(datahist.numEntries()):
-	 datahist.get(i)
-	 datahist.weightError(RooAbsData.SumW2)
-         print "Bin %i x=%f w = %f we = %f"%(i,datahist.get(i).getRealValue("rrv_mass_lvj"),datahist.weight(),datahist.weightError(RooAbsData.SumW2))
+        datahist.get(i)
+        datahist.weightError(RooAbsData.SumW2)
+        print "Bin %i x=%f w = %f we = %f"%(i,datahist.get(i).getRealValue("rrv_mass_lvj"),datahist.weight(),datahist.weightError(RooAbsData.SumW2))
         '''
          
         ## if the shape parameters has to be decorrelated
@@ -2828,7 +2970,7 @@ objName ==objName_before ):
         rfresult = model.fitTo(rdataset_mj,RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE), RooFit.Minimizer("Minuit2") );
         rfresult = model.fitTo(rdataset_mj,RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE), RooFit.Minimizer("Minuit2") );
         rfresult.Print();
-	
+
         ## Plot the result
         mplot = rrv_mass_j.frame(RooFit.Title(label+" fitted by "+in_model_name), RooFit.Bins(int(rrv_mass_j.getBins()/self.narrow_factor)) );
         rdataset_mj.plotOn( mplot, RooFit.MarkerSize(1), RooFit.DataError(RooAbsData.SumW2), RooFit.XErrorSize(0) );
@@ -2853,8 +2995,8 @@ objName ==objName_before ):
         parameters_list = model.getParameters(rdataset_mj);
         self.draw_canvas_with_pull( rrv_mass_j,datahist,mplot, mplot_pull,ndof,parameters_list,"%s/m_j_fitting/"%(self.plotsDir), "m_j"+label+in_file_name, in_model_name)
 
-	self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").Print();
-	self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.channel).Print();
+        self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").Print();
+        self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.channel).Print();
         #normalize the number of total events to lumi --> correct the number to scale to the lumi
         self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").setVal( self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").getVal()*self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.channel).getVal() )
         self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").setError(self.workspace4fit_.var("rrv_number"+label+"_"+self.channel+"_mj").getError()*self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.channel).getVal() )
@@ -2866,15 +3008,15 @@ objName ==objName_before ):
         #nparameters =  rresult_param.getSize()
         #ChiSquare = model.createChi2(datahist,RooFit.Extended(kTRUE),RooFit.DataError(RooAbsData.Poisson))
         #chi_over_ndf= ChiSquare.getVal()/(Nbin - nparameters);
-     	#print "nPar=%s, chiSquare=%f/%f"%(nparameters, ChiSquare.getVal()*(Nbin - nparameters), (Nbin - nparameters) )
+        #print "nPar=%s, chiSquare=%f/%f"%(nparameters, ChiSquare.getVal()*(Nbin - nparameters), (Nbin - nparameters) )
 
         #datahist = rdataset_mj.binnedClone(rdataset_mj.GetName()+"_binnedClone",rdataset_mj.GetName()+"_binnedClone")
         #Nbin = int(rrv_mass_j.getBins());
         #nparameters = rfresult.floatParsFinal().getSize();
         #ChiSquare = model.createChi2(datahist,RooFit.Extended(kTRUE),RooFit.DataError(RooAbsData.Poisson));
         #chi_over_ndf= ChiSquare.getVal()/(Nbin - nparameters);
-	#print "nPar=%s, chiSquare=%s/%s"%(nparameters, ChiSquare.getVal()*(Nbin - nparameters), (Nbin - nparameters) );
-	
+        #print "nPar=%s, chiSquare=%s/%s"%(nparameters, ChiSquare.getVal()*(Nbin - nparameters), (Nbin - nparameters) );
+
         ##### apply the correction of the mean and sigma from the ttbar control sample to the STop, TTbar and VV 
         par=parameters_list.createIterator();
         par.Reset();
@@ -2987,12 +3129,12 @@ objName ==objName_before ):
         nbins_mlvj=int((rrv_mass_lvj.getMax()-rrv_mass_lvj.getMin())/self.BinWidth_mlvj);
 
         rrv_mass_lvj.setBins(nbins_mlvj);
-	
-	if TString(label).Contains("_RS1G_WW_") or TString(label).Contains("_BulkGraviton_") or TString(label).Contains("_Wprime_WZ_"):
-	   bw = self.BinWidth_mlvj
-	   nbins_mlvj=int((rrv_mass_lvj.getMax()-rrv_mass_lvj.getMin())/bw);
-	   rrv_mass_lvj.setBins(nbins_mlvj)
-	   
+
+        if TString(label).Contains("_RS1G_WW_") or TString(label).Contains("_BulkGraviton_") or TString(label).Contains("_Wprime_WZ_"):
+          bw = self.BinWidth_mlvj
+          nbins_mlvj=int((rrv_mass_lvj.getMax()-rrv_mass_lvj.getMin())/bw);
+          rrv_mass_lvj.setBins(nbins_mlvj)
+   
         ##### dataset of m_j -> scaleed and not scaled to lumi 
         rdataset_mj     = RooDataSet("rdataset"+label+"_"+self.channel+"_mj","rdataset"+label+"_"+self.channel+"_mj",RooArgSet(rrv_mass_j,rrv_weight),RooFit.WeightVar(rrv_weight) );
         rdataset4fit_mj = RooDataSet("rdataset4fit"+label+"_"+self.channel+"_mj","rdataset4fit"+label+"_"+self.channel+"_mj",RooArgSet(rrv_mass_j,rrv_weight),RooFit.WeightVar(rrv_weight) );
@@ -3029,7 +3171,7 @@ objName ==objName_before ):
 #        tmp_lumi=814.;
         #tmp_lumi=2300.;
         #tmp_lumi=2197.96*1.023;
-        tmp_lumi=self.luminosity;
+        tmp_lumi=Luminosity_float_value;
         tmp_scale_to_lumi=1.;
         print "--------------------------------------------"
         print "\n\nMATTEO_CHECK"
@@ -3037,14 +3179,49 @@ objName ==objName_before ):
         print "--------------------------------------------\n\n"
             
         for i in range(treeIn.GetEntries()):
-            if i % 100000 == 0: print "iEntry: ",i
             treeIn.GetEntry(i);
+            
+            if (options.pseudodata or TString(label).Contains("Bulk") or TString(label).Contains("Higgs") or TString(label).Contains("_STop") or TString(label).Contains("_TTbar") or TString(label).Contains("_VV")):
+               tmp_scale_to_lumi_global=TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi);
+               tmp_event_weight_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+               tmp_event_weight4fit_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+               tmp_event_weight4fit_global = tmp_event_weight4fit_global*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+               
+            else:
+               tmp_scale_to_lumi_global=1.;
+               tmp_event_weight_global = 1.;
+               tmp_event_weight4fit_global = 1.;
+            
+            if i==0:
+                # eff_and_pu_Weight_2*genWeight*wSampleWeight
+                tmp_scale_to_lumi = tmp_scale_to_lumi_global;#TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi);
+#            tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+#            print "tmp scale to lumi: ",tmp_scale_to_lumi
+            
+            if TString(label).Contains("_STop"): 
+               if i % 1000 == 0: 
+                  print "\niEntry: ",i
+                  print "tmp_scale_to_lumi:\t\t %e" % tmp_scale_to_lumi
+                  print "treeIn.genWeight:\t\t %e" % treeIn.genWeight
+                  print "treeIn.wSampleWeight:\t\t%e" % treeIn.wSampleWeight
+                  print "tmp_lumi: \t\t %f" % tmp_lumi
+             
+            else: 
+               if i % 100000 == 0: 
+                  print "\niEntry: \t\t%i" %i
+                  print "tmp_scale_to_lumi:\t\t %f" % tmp_scale_to_lumi
+                  print "treeIn.genWeight:\t\t %e" % treeIn.genWeight
+                  print "treeIn.wSampleWeight:\t\t%e" % treeIn.wSampleWeight
+                  print "tmp_lumi: \t\t %f" % tmp_lumi 
+            
 
+            ''' LUCA ORIGNAL
             if i==0:
                 # eff_and_pu_Weight_2*genWeight*wSampleWeight
                 tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #            tmp_scale_to_lumi=treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #            print "tmp scale to lumi: ",tmp_scale_to_lumi
+            '''
 
             tmp_jet_mass=getattr(treeIn, jet_mass);
 
@@ -3097,23 +3274,66 @@ objName ==objName_before ):
 
 #                if (label=="_data_xww") and (treeIn.jet_mass_pr > 65.) and (treeIn.jet_mass_pr < 135.) : self.isGoodEvent = 0; #BLINDING
 
-            #VBF SELECTION
+            '''
+            #VBF SELECTION MATTEO ADDED
+            if self.IsGoodEvent==1:
+               if options.VBF_process:
+               
+                  if SampleMass_str.find('Higgs650') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                     if (abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<4.2 or abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)>9.3): self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<856 or treeIn.vbf_maxpt_jj_m>5774): self.isGoodEvent=0;
+               
+               
+                  if SampleMass_str.find('Higgs1000') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                     if (abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<4.04 or abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)>10.4): self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<973 or treeIn.vbf_maxpt_jj_m>4531): self.isGoodEvent=0;
+               
+               
+                  if SampleMass_str.find('BulkGraviton600') !=-1: 
+                     if treeIn.njets<2: self.isGoodEvent=0;
+                  #if abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5: self.isGoodEvent=0;
+                     if (treeIn.vbf_maxpt_jj_m<575 or treeIn.vbf_maxpt_jj_m>3641): self.isGoodEvent=0;
+               
+                
+               
+            #else: self.isGoodEvent=1;
+            '''
+            '''
             if ((options.type).find('vbf') != -1 and treeIn.njets<2): self.isGoodEvent=0;
             if ((options.type).find('vbf') != -1 and abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5): self.isGoodEvent=0;
             if ((options.type).find('vbf') != -1 and treeIn.vbf_maxpt_jj_m<250): self.isGoodEvent=0;
 
             if ((options.type).find('ggH') != -1 and treeIn.njets>1): self.isGoodEvent=0;
- 
+            ''' 
 #            if ((label =="_data" or label =="_data_xww") and treeIn.jet_mass_pr >105 and treeIn.jet_mass_pr < 135 ) : self.isGoodEvent = 0; 
 
-	    
+    
+            '''
+            if options.pseudodata and (TString(label).Contains("_STop") or TString(label).Contains("_TTbar") or TString(label).Contains("_VV")):
+               #tmp_scale_to_lumi_global=TMath.Abs(treeIn.genWeight*treeIn.wSampleWeight*Luminosity_float_value);
+               tmp_event_weight_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+               tmp_event_weight4fit_global = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+               tmp_event_weight4fit_global = tmp_event_weight4fit_global*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+
+
+
+            else:
+               #tmp_scale_to_lumi_global=Luminosity_float_value;
+               tmp_event_weight_global = 1.
+               tmp_event_weight4fit_global = 1.
+            '''
+               
+            
+            
             if self.isGoodEvent == 1:
                 ### weigh MC events              
                 #tmp_event_weight     =treeIn.eff_and_pu_Weight_2*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
                 #tmp_event_weight4fit = treeIn.hltweight*treeIn.puweight*treeIn.btagweight;                 
-                tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
-                tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
-                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+                tmp_event_weight     = tmp_event_weight_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+                tmp_event_weight4fit =tmp_event_weight4fit_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+                #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
 #                tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi*treeIn.eff_and_pu_Weight/tmp_scale_to_lumi;
 #                tmp_event_weight4fit = treeIn.genWeight;
 #                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.eff_and_pu_Weight*treeIn.wSampleWeight*tmp_lumi#/tmp_scale_to_lumi;
@@ -3121,22 +3341,24 @@ objName ==objName_before ):
 #                tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
 #                tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
 #                tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
-             	            		
+                        
                 if label =="_data" or label =="_data_xww" :
 #                     print "OK"; 
 #                    tmp_event_weight=1.;
 #                    tmp_event_weight4fit=1.;                    
-                    tmp_event_weight     =  treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
-                    tmp_event_weight4fit = treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
-                    tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
+                    tmp_event_weight     = tmp_event_weight_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
+                    tmp_event_weight4fit = tmp_event_weight4fit_global; #treeIn.trig_eff_Weight*treeIn.id_eff_Weight*treeIn.eff_and_pu_Weight*treeIn.genWeight;
+                    #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi/tmp_scale_to_lumi;
                     #tmp_event_weight     = treeIn.genWeight*treeIn.wSampleWeight*tmp_lumi;
                     #tmp_event_weight4fit = treeIn.genWeight;
                     #tmp_event_weight4fit = tmp_event_weight4fit*treeIn.wSampleWeight*tmp_lumi#/tmp_scale_to_lumi;
                 else:
                     if TString(label).Contains("_TTbar") or TString(label).Contains("_STop") :
                         tmp_event_weight=tmp_event_weight*self.rrv_wtagger_eff_reweight_forT.getVal();
+                        #tmp_event_weight4fit=tmp_event_weight4fit*self.rrv_wtagger_eff_reweight_forT.getVal(); # MATTEO_ADDED
                     else:
                         tmp_event_weight=tmp_event_weight*self.rrv_wtagger_eff_reweight_forV.getVal();
+                        #tmp_event_weight4fit=tmp_event_weight4fit*self.rrv_wtagger_eff_reweight_forV.getVal(); #MATTEO_ADDED
                 
                 rrv_mass_lvj.setVal(treeIn.mass_lvj_type2);
 
@@ -3249,9 +3471,9 @@ objName ==objName_before ):
         print "############################## fit_STop  #################################"
         self.get_mj_and_mlvj_dataset(self.file_STop_mc,"_STop_xww", self.jetalgo)
 #        self.fit_mj_single_MC(self.file_STop_mc,"_STop_xww","ExpGaus");
-        self.fit_mj_single_MC(self.file_STop_mc,"_STop_xww","2Gaus_ErfExp");
+        self.fit_mj_single_MC(self.file_STop_mc,"_STop_xww","ExpGaus");#2Gaus_ErfExp"); MATTEO CHANGED
         self.fit_mlvj_model_single_MC(self.file_STop_mc,"_STop_xww","_sb_lo","Exp", 0, 0, 1);
-        self.fit_mlvj_model_single_MC(self.file_STop_mc,"_STop_xww","_signal_region","Exp", 1, 0, 1);
+        self.fit_mlvj_model_single_MC(self.file_STop_mc,"_STop_xww","_signal_region",self.MODEL_4_mlvj, 1, 0, 1);#"Exp", 1, 0, 1);
         print "________________________________________________________________________"
 
     ##### Define the steps to fit VV MC in the mj and mlvj spectra
@@ -3273,10 +3495,12 @@ objName ==objName_before ):
         print "################################ fit_TTbar #########################################"
         ### Build the dataset
         self.get_mj_and_mlvj_dataset(self.file_TTbar_mc,"_TTbar_xww", self.jetalgo)# to get the shape of m_lvj
-        if self.wtagger_label.find("LP") != -1: self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar_xww","ExpGaus");
-        else:                          self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar_xww","2Gaus_ErfExp");
-	self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar_xww","_sb_lo","Exp");
-        self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar_xww","_signal_region","Exp",1, 0, 1);
+        if self.wtagger_label.find("LP") != -1: 
+           self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar_xww","ExpGaus");
+        else:                          
+           self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar_xww","2Gaus_ErfExp");
+        self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar_xww","_sb_lo","Exp");
+        self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar_xww","_signal_region",self.MODEL_4_mlvj, 1, 0, 1);#"Exp",1, 0, 1);
         print "________________________________________________________________________"
 
     ##### Define the steps to fit WJets MC in the mj and mlvj spectra
@@ -3285,8 +3509,8 @@ objName ==objName_before ):
         ### Build the dataset
         self.get_mj_and_mlvj_dataset(self.file_WJets0_mc,"_WJets0_xww", self.jetalgo)# to get the shape of m_lvj
         self.get_mj_and_mlvj_dataset(self.file_WJets0_mc,"_WJets01_xww", self.jetalgo)# to get the shape of m_lvj
-	
-	### Fit in mj depends on the mlvj lower limit -> fitting the turn on at low mass or not
+
+        ### Fit in mj depends on the mlvj lower limit -> fitting the turn on at low mass or not
         self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets0_xww","User1");
         self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets01_xww","ErfExp");
             
@@ -3319,7 +3543,7 @@ objName ==objName_before ):
             self.interpolate_Signal()
         else:    
             self.fit_Signal()
-#	sys.exit()
+#sys.exit()
         self.fit_WJets()
         self.fit_TTbar()
         self.fit_VV()
@@ -3342,6 +3566,9 @@ objName ==objName_before ):
         self.prepare_limit("sideband_correction_method1",1,0,0)
         ### finale plot and check of the workspace
         self.read_workspace(1)
+        print "\n\n----------------------------------------------------\n\n"
+        print "MATTEO CHECK:\tANALYSIS SIDEBAND CORRECTION FUNCTION ENDED :)"
+        print "\n\n----------------------------------------------------\n\n"
         
     ##### Analysis with no shape uncertainty on alpha
     def analysis_sideband_correction_method1_without_shape_and_psmodel_systematic(self):
@@ -3354,7 +3581,7 @@ objName ==objName_before ):
         #### fit sb lo with just one parametrization
         self.fit_mlvj_in_Mj_sideband("_WJets0_xww","_sb_lo", self.MODEL_4_mlvj,1)
         #### prepare limit 
-        self.prepare_limit("sideband_correction_method1",1,0,0)
+        self.prepare_limit("sideband_correction_method1",0,0,0)#1,0,0)
         #### read the workspace
         self.read_workspace(1)
 
@@ -3903,8 +4130,8 @@ objName ==objName_before ):
          #### scale factor in order to scale MC to data in the final plot -> in order to avoid the normalization to data which is done by default in rooFit
          scale_number_Total_background_MC = rrv_number_Total_background_MC.getVal()/data_obs.sumEntries()
         else:
-	 scale_number_Total_background_MC = rrv_number_Total_background_MC.getVal()   
-	 scale_number_signal = rrv_number_signal.getVal()             
+         scale_number_Total_background_MC = rrv_number_Total_background_MC.getVal()   
+         scale_number_signal = rrv_number_signal.getVal()             
         #### create the frame
         mplot = rrv_x.frame(RooFit.Title("check_workspace"), RooFit.Bins(int(rrv_x.getBins()/self.narrow_factor)));
         mplotP = rrv_x.frame(RooFit.Title("check_workspaceP"), RooFit.Bins(int(rrv_x.getBins()/self.narrow_factor)));
@@ -3955,19 +4182,19 @@ objName ==objName_before ):
         self.leg = self.legend4Plot(mplot,0,1,-0.01,-0.05,0.11,0.);
         #self.leg.SetTextSize(0.036);
         mplot.addObject(self.leg);
-	pt1 = ROOT.TPaveText(0.6180905,0.4355644,0.8291457,0.507992,"NDC")
-	pt1.SetTextFont(42)
-	pt1.SetTextSize(0.05)
-	#pt.SetTextAlign(12)
-	pt1.SetFillColor(0)
-	pt1.SetFillStyle(0)
-	pt1.SetBorderSize(0)
-	text = pt1.AddText("")
-	if options.category.find('Z') != -1: text = pt1.AddText("WZ category")
-	elif options.category.find('W') != -1: text = pt1.AddText("WW category")
-	text.SetTextFont(62)
-#	mplot.addObject(pt1)
-	            
+        pt1 = ROOT.TPaveText(0.6180905,0.4355644,0.8291457,0.507992,"NDC")
+        pt1.SetTextFont(42)
+        pt1.SetTextSize(0.05)
+        #pt.SetTextAlign(12)
+        pt1.SetFillColor(0)
+        pt1.SetFillStyle(0)
+        pt1.SetBorderSize(0)
+        text = pt1.AddText("")
+        if options.category.find('Z') != -1: text = pt1.AddText("WZ category")
+        elif options.category.find('W') != -1: text = pt1.AddText("WW category")
+        text.SetTextFont(62)
+#mplot.addObject(pt1)
+            
         mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
             
         if workspace.var("rrv_num_floatparameter_in_last_fitting"):
@@ -3983,37 +4210,63 @@ objName ==objName_before ):
         
 
 ### funtion to run the complete alpha analysis
-def pre_limit_sb_correction(luminosity,method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction(method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                             in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False): 
 
     print "#################### pre_limit_sb_correction: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
     print method    
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     getattr(boostedW_fitter,"analysis_sideband_correction_%s"%(method) )();
+    
+    print "\n\n----------------------------------------------------\n\n"
+    print "MATTEO CHECK:\tBACKGROUND EVALUATION ENDED :)"
+    print "\n\n----------------------------------------------------\n\n"
                                                 
 ### funtion to run the analysis without systematics
-def pre_limit_sb_correction_without_systematic(luminosity, channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction_without_systematic( channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                                                  in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False):
 
     print "#################### pre_limit_sb_correction_without_systermatic: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     boostedW_fitter.analysis_sideband_correction_method1_without_shape_and_psmodel_systematic()
 
 
-def pre_limit_simple(luminosity,channel,sample,lomass,himass):
+def pre_limit_simple(channel,sample,lomass,himass):
     print "######################### pre_limit_simple for %s sampel"%(channel)
-    pre_limit_sb_correction_without_systematic(luminosity,channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
+    pre_limit_sb_correction_without_systematic(channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
+
+
+
+
+
+    
+def timenow(form=0):
+    if form:
+       timenow=datetime.strftime(datetime.now(), '%d-%m-%Y_%H:%M:%S')   
+    else:
+       timenow=datetime.strftime(datetime.now(), '%d-%m-%Y %H:%M:%S')
+    return timenow
+    
 
 #### Main Code
 if __name__ == '__main__':
 
+    start_time=timenow(0);
     channel=options.channel;
     #sample=options.sample; #BulkGraviton_lvjj_c0p2_M1000   
     mass=options.mass;
-    luminosity=options.luminosity_value;
+    #luminosity=options.luminosity_value;
     #sample = "RS1G_WW_lvjj_M%i"%(mass)
     #sample = options.sample+"_M"+str(int(mass))
-    sample = options.sample+str(int(mass))
+    #sample = options.sample+str(int(mass))
+    
+   
+    #if (options.ntuple=="WWTree_17feb_jecV7_lowmass" and options.sample=="BulkGraviton"):
+    #  sample = options.sample+"_newxsec"+str(int(mass));
+    
+    #else:
+    sample = options.sample+str(int(mass));
+    
     
     lomass = mass - mass*15./100.;
     himass = mass + mass*15./100.; 
@@ -4022,17 +4275,55 @@ if __name__ == '__main__':
             
     if options.simple:
         print '################# simple mode for %s sample'%(channel)
-        pre_limit_simple(luminosity,channel,sample,lomass,himass);
+        pre_limit_simple(channel,sample,lomass,himass);
     else:
-        if options.category.find('HP2') != -1 or options.category.find('ALLP2') != -1:	
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
-	else:
+        if options.category.find('HP2') != -1 or options.category.find('ALLP2') != -1:
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
+        else:
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"ExpN","ExpN",options.interpolate) 
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"Exp","ExpTail",options.interpolate) 
-	
-    print "\n\n------------------------------------------------"
-    print "\n\nMATTEO CHECK"
-    print "BACKGROUND EVALUATION ENDED!!!!!!"
-    print ":)"
-    print "\n\n------------------------------------------------"
+    
+    end_time=timenow(0);
+    
+    lumi_str_value=str("%.0f"%Luminosity_float_value);
+    m=str(mass);
+    
+    
+    '''
+    if options.VBF_process:
+        dir_name="Ntuple_%s/Lumi_%s_VBF"%(options.ntuple,lumi_str_value)
+        if not os.path.isdir(dir_name):
+               os.system("mkdir "+dir_name);
+
+    else:
+        dir_name="Ntuple_%s/Lumi_%s"%(options.ntuple,lumi_str_value)
+        if not os.path.isdir(dir_name):
+               os.system("mkdir "+dir_name);
+    '''
+    output_dir_name=Lumi_dir+"/Data_Settings_%s_%s"%(channel,SampleMass_str)
+    if not os.path.isdir(output_dir_name):
+          os.system("mkdir "+output_dir_name);
+
+    #dir_name="Ntuple_%s/Data_Settings_%s_%s_lumi_%s/"%(options.ntuple,channel,Sample_str_value,lumi_str_value)
+    
+    filename=output_dir_name+"/Data_Settings_%s_%s.txt"%(channel,SampleMass_str);
+    f = open(filename, 'w')
+    f.write("Parametri utilizzati per la valutazione del Background\n\n")
+    f.write("\nchannel:\t\t\t\t%s" %channel)
+    f.write("\nsample :\t\t\t\t%s" %sample)
+    f.write("\nMass : \t\t\t\t\t%s" %m)
+    #f.write("\ncategory :\t%s" % category)
+    #f.write("\nprocess_mode :\t%s" %process_mode)
+    #f.write("\njetalgo :\t%s" %jetalgo)
+    #f.write("\ninterpolate :\t%s" %interpolate)
+    f.write("\nluminosity :\t\t\t%f" %Luminosity_float_value)
+    f.write("\nntuple_dir :\t\t\t%s" %Ntuple_Path_lxplus)
+    f.write("\nntuple_used :\t\t\t%s" %file_data_used)
+    f.write("\nmean_shift :\t\t\t%f" %Mean_Shift)
+    f.write("\nsigma_scale_factor :\t%f" %Sigma_Scale_Factor)
+    f.write("\nreweight_for_T :\t\t%f" %reweight_for_T_value)
+    f.write("\nreweight_for_V :\t\t%f" %reweight_for_V_value)
+    f.write("\n\n\nStarting time : \t\t%s"%start_time)
+    f.write("\n\n\nEnding time : \t\t\t%s"%end_time)
+    f.closed

@@ -16,7 +16,7 @@ parser.add_option('--luminosity',action="store",type="float",dest="luminosity",d
 
 currentDir = os.getcwd();
 
-masses = [800]
+masses = [1200]
 #masses = [600,700,750,800,900,1000,1200,1400]
 #masses = [650,700,750,800,900,1000,1200,1400,2000,3000,4000]
 #masses = [800,1200,1400,1600,1800,2000,2500,3000,3500,4000,4500]
@@ -37,7 +37,7 @@ for m in masses:
       outScript.write("\n"+'echo ${PATH}');
       outScript.write("\n"+'ls');
 #      cmd = "python g1_exo_doFit_class.py -b -c %s --mass %i --category %s --sample %s_lvjj --jetalgo %s --interpolate True > log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.sample,m,options.channel,options.category)
-      cmd = "python LUCA_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f> log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
+      cmd = "python MATTEO_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f> log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
       outScript.write("\n"+cmd);
 #      outScript.write("\n"+'rm *.out');
       outScript.close();
@@ -46,12 +46,12 @@ for m in masses:
       os.system("bsub -q cmscaf1nd -cwd "+currentDir+" "+currentDir+"/"+fn+".sh");
 
    elif (options.interpolate==True and not options.batchMode==True):
-      cmd = "python LUCA_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f --interpolate True > log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
+      cmd = "python MATTEO_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f --interpolate True > log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
       print cmd
       os.system(cmd)
 
    else:   
-      cmd = "python LUCA_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f > log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
+      cmd = "python MATTEO_g1_exo_doFit_class_new.py -b -c %s --mass %i --category %s --sample %s --jetalgo %s --luminosity %f > log/%s_M%i_%s_%s.log" %(options.channel,m,options.category,options.sample,options.jetalgo,options.luminosity,options.sample,m,options.channel,options.category)
       print cmd
       os.system(cmd)
 

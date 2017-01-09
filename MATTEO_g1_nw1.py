@@ -22,17 +22,25 @@ from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TSt
 
 parser = OptionParser()
 
-parser.add_option('-c', '--channel',action="store",type="string",dest="channel",default="el")
-parser.add_option('--sample', action="store",type="string",dest="sample",default="MWp_1500_bb")
+parser.add_option('-c', '--channel',action="store",type="string",dest="channel",default="mu")
+parser.add_option('--sample', action="store",type="string",dest="sample",default="BulkGraviton")
 parser.add_option('--mass', action="store",type="float",dest="mass",default="1500")
 parser.add_option('-s','--simple', action='store', dest='simple', default=False, help='pre-limit in simple mode')
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
 parser.add_option('--inPath', action="store",type="string",dest="inPath",default="./")
-parser.add_option('--category', action="store",type="string",dest="category",default="")
-parser.add_option('--type', action="store",type="string",dest="type",default="")
+parser.add_option('--category', action="store",type="string",dest="category",default="HP")
+parser.add_option('--prom', action="store",type="string",dest="Process_Mode",default="normally")
 parser.add_option('--jetalgo', action="store",type="string",dest="jetalgo",default="Mjsoftdrop")
 parser.add_option('--interpolate', action="store_true",dest="interpolate",default=False)
 parser.add_option('--luminosity', action="store", type="float", dest="luminosity_value", default="2300.")
+parser.add_option('--ssf', action="store", type="float", dest="Sigma_Scale_Factor", default="1.")
+parser.add_option('--ms', action="store", type="float", dest="Mean_Shift", default="0.")
+parser.add_option('--rft', action="store", type="float", dest="rft", default="1.")
+parser.add_option('--rfv', action="store", type="float", dest="rfv", default="1.")
+parser.add_option('--ndir', action="store",type="string",dest="Ntuple_directory",default="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_22sep_jecV7_lowmass/")
+parser.add_option('--nus', action="store",type="string",dest="Ntuple_used",default="WWTree_pseudodata.root")
+
+
 
 (options, args) = parser.parse_args()
 
@@ -44,7 +52,7 @@ from ROOT import draw_error_band, draw_error_band2, draw_error_band_extendPdf, d
 
 class doFit_wj_and_wlvj:
 
-    def __init__(self,in_luminosity, in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
+    def __init__(self,in_channel,in_signal_sample, jetalgo, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400., in_mlvj_max=1400., fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1", interpolate=False, input_workspace=None):
 
         tdrstyle.setTDRStyle()
         TGaxis.SetMaxDigits(3)
@@ -59,7 +67,7 @@ class doFit_wj_and_wlvj:
         self.MODEL_4_mlvj_alter=fit_model_alter;
 	self.jetalgo = jetalgo
         self.interpolate = interpolate
-        self.luminosity=in_luminosity
+        
                 
         print "########################################################################################"
         print "######## define class: binning, variables, cuts, files and nuissance parameters ########"
@@ -145,7 +153,9 @@ class doFit_wj_and_wlvj:
         #self.file_Directory="WWTree_25jan_jecV6_lowmass/WWTree_"+self.channel+"/";
         #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
         #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_9jun_80x/WWTree_"+self.channel+"/";
-        self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
+        ndirectory=options.Ntuple_directory;
+        self.file_Directory= ndirectory +"WWTree_"+self.channel+"/";
+        #self.file_Directory="/afs/cern.ch/user/l/lbrianza/work/public/WWTree_17feb_jecV7_lowmass/WWTree_"+self.channel+"/";
 #        self.file_Directory="WWTree_28jan_jecV6_lowmass/WWTree_"+self.channel+"/";
                  
         #prepare background data and signal samples            
@@ -153,7 +163,8 @@ class doFit_wj_and_wlvj:
 
 #        self.file_data = ("WWTree_data_golden.root");#keep blind!!!!
 #        self.file_data = ("WWTree_pseudodataS.root");#fake data
-        self.file_data = ("WWTree_pseudodata.root");#fake data
+        self.file_data= options.Ntuple_used;
+        #self.file_data = ("WWTree_pseudodata.root");#fake data
         self.file_signal     = ("WWTree_%s.root"%(self.signal_sample));
         self.file_WJets0_mc  = ("WWTree_WJets.root");
         self.file_VV_mc      = ("WWTree_VV.root");# WW+WZ
@@ -184,7 +195,32 @@ class doFit_wj_and_wlvj:
            if self.wtagger_label.find("0") != -1: self.categoryID=13;
            elif self.wtagger_label.find("1") != -1: self.categoryID=15;
            elif self.wtagger_label.find("2") != -1: self.categoryID=17;
-
+        
+        
+        ### MATTEO CHAMGED
+        if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", options.rft);#0.850);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.042);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", options.rfv);#1.021);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.151);
+        if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("HP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", options.rft);#0.850);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.042);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV", options.rfv);#11.021);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.151);
+        if self.channel=="mu" and self.wtagger_label.find("LP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.787);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.110);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+        if (self.channel=="el" or self.channel=="em") and self.wtagger_label.find("LP") != -1:
+            self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 0.661);
+            self.rrv_wtagger_eff_reweight_forT.setError(0.200);
+            self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
+            self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+            
+            
+        '''
         if self.channel=="mu" and self.wtagger_label.find("HP") != -1:
             self.rrv_wtagger_eff_reweight_forT=RooRealVar("rrv_wtagger_eff_reweight_forT","rrv_wtagger_eff_reweight_forT", 1);#0.850);
             self.rrv_wtagger_eff_reweight_forT.setError(0.042);
@@ -205,6 +241,7 @@ class doFit_wj_and_wlvj:
             self.rrv_wtagger_eff_reweight_forT.setError(0.200);
             self.rrv_wtagger_eff_reweight_forV=RooRealVar("rrv_wtagger_eff_reweight_forV","rrv_wtagger_eff_reweight_forV",1.268);
             self.rrv_wtagger_eff_reweight_forV.setError(0.332);
+            '''
 
         print "wtagger efficiency correction for Top sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forT.getVal(), self.rrv_wtagger_eff_reweight_forT.getError());
         print "wtagger efficiency correction for V sample: %s +/- %s"%(self.rrv_wtagger_eff_reweight_forV.getVal(), self.rrv_wtagger_eff_reweight_forV.getError());
@@ -215,9 +252,33 @@ class doFit_wj_and_wlvj:
 #        self.sigma_scale=0.890 #NEW
 #        self.mean_shift = -1.080
 #        self.sigma_scale=1.066
-        self.mean_shift = 0.
-        self.sigma_scale=1.
         
+        
+        ### MATTEO CHANGEG
+        self.mean_shift = options.Mean_Shift
+        self.sigma_scale= options.Sigma_Scale_Factor
+        #self.mean_shift = 0.
+        #self.sigma_scale=1.
+    
+        '''
+    ### MATTEO CHANGED    
+	lumi_float_value=options.luminosity_value;
+	lumi_str_value=str("%.0f"%lumi_float_value);
+	self.plotsDir = 'plots_%s_%s_lumi_%s' %(self.channel,self.wtagger_label,lumi_str_value)
+        #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
+        if not os.path.isdir("cards_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value)):
+            os.system("mkdir cards_%s_%s_lumi_%s"%(self.channel,self.wtagger_label,lumi_str_value));
+        self.rlt_DIR="cards_%s_%s_lumi_%s/"%(self.channel,self.wtagger_label,lumi_str_value)
+
+        ## extra text file
+        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s_%s_%s_lumi_%s.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for limit
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_workspace.root"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## datacard for the ubninned limit
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        ## workspace for the binned limit
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_lumi_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label,lumi_str_value)
+        '''
 	self.plotsDir = 'plots_%s_%s' %(self.channel,self.wtagger_label)
         #result files: The event number, parameters and error write into a txt file. The dataset and pdfs write into a root file
         if not os.path.isdir("cards_%s_%s"%(self.channel,self.wtagger_label)):
@@ -232,7 +293,7 @@ class doFit_wj_and_wlvj:
         self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_%s_%s_unbin.txt"%(self.signal_sample,self.channel,self.wtagger_label)
         ## workspace for the binned limit
         self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_%s_%s_counting.txt"%(self.signal_sample,self.channel,self.wtagger_label)
-        
+               
         self.file_out=open(self.file_rlt_txt,"w");
         self.file_out.write("Welcome:\n");
         self.file_out.close()
@@ -563,7 +624,8 @@ objName ==objName_before ):
        
        ### MATTEO ADDED. 
        ### The luminosity is expressed in pb. Is a float.
-       lumi_val=self.luminosity;
+       #lumi_val=self.luminosity;
+       lumi_val=options.luminosity_value;
        lumi_print_scale_factor=1000.;
        tmp_lumi_val= lumi_val/lumi_print_scale_factor;
        
@@ -3029,7 +3091,8 @@ objName ==objName_before ):
 #        tmp_lumi=814.;
         #tmp_lumi=2300.;
         #tmp_lumi=2197.96*1.023;
-        tmp_lumi=self.luminosity;
+        #tmp_lumi=self.luminosity;
+        tmp_lumi=options.luminosity_value;
         tmp_scale_to_lumi=1.;
         print "--------------------------------------------"
         print "\n\nMATTEO_CHECK"
@@ -3098,11 +3161,11 @@ objName ==objName_before ):
 #                if (label=="_data_xww") and (treeIn.jet_mass_pr > 65.) and (treeIn.jet_mass_pr < 135.) : self.isGoodEvent = 0; #BLINDING
 
             #VBF SELECTION
-            if ((options.type).find('vbf') != -1 and treeIn.njets<2): self.isGoodEvent=0;
-            if ((options.type).find('vbf') != -1 and abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5): self.isGoodEvent=0;
-            if ((options.type).find('vbf') != -1 and treeIn.vbf_maxpt_jj_m<250): self.isGoodEvent=0;
+            if ((options.Process_Mode).find('vbf') != -1 and treeIn.njets<2): self.isGoodEvent=0;
+            if ((options.Process_Mode).find('vbf') != -1 and abs(treeIn.vbf_maxpt_j1_eta-treeIn.vbf_maxpt_j2_eta)<2.5): self.isGoodEvent=0;
+            if ((options.Process_Mode).find('vbf') != -1 and treeIn.vbf_maxpt_jj_m<250): self.isGoodEvent=0;
 
-            if ((options.type).find('ggH') != -1 and treeIn.njets>1): self.isGoodEvent=0;
+            if ((options.Process_Mode).find('ggH') != -1 and treeIn.njets>1): self.isGoodEvent=0;
  
 #            if ((label =="_data" or label =="_data_xww") and treeIn.jet_mass_pr >105 and treeIn.jet_mass_pr < 135 ) : self.isGoodEvent = 0; 
 
@@ -3983,26 +4046,26 @@ objName ==objName_before ):
         
 
 ### funtion to run the complete alpha analysis
-def pre_limit_sb_correction(luminosity,method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction(method, channel, signal_sample="BulkG_c0p2_M1000", jetalgo="Mjsoftdrop",in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                             in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False): 
 
     print "#################### pre_limit_sb_correction: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
     print method    
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel, signal_sample, jetalgo,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     getattr(boostedW_fitter,"analysis_sideband_correction_%s"%(method) )();
                                                 
 ### funtion to run the analysis without systematics
-def pre_limit_sb_correction_without_systematic(luminosity, channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
+def pre_limit_sb_correction_without_systematic(channel, signal_sample, in_mlvj_signal_region_min=500, in_mlvj_signal_region_max=700,
                                                  in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1",interpolate=False):
 
     print "#################### pre_limit_sb_correction_without_systermatic: channel %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(channel,signal_sample,in_mlvj_signal_region_min,in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
-    boostedW_fitter=doFit_wj_and_wlvj(luminosity,channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
+    boostedW_fitter=doFit_wj_and_wlvj(channel,signal_sample,in_mlvj_signal_region_min, in_mlvj_signal_region_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter,interpolate);
     boostedW_fitter.analysis_sideband_correction_method1_without_shape_and_psmodel_systematic()
 
 
-def pre_limit_simple(luminosity,channel,sample,lomass,himass):
+def pre_limit_simple(channel,sample,lomass,himass):
     print "######################### pre_limit_simple for %s sampel"%(channel)
-    pre_limit_sb_correction_without_systematic(luminosity,channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
+    pre_limit_sb_correction_without_systematic(channel,sample,lomass,himass,40,130,700,5000,"ExpN","ExpTail")
 
 #### Main Code
 if __name__ == '__main__':
@@ -4010,7 +4073,7 @@ if __name__ == '__main__':
     channel=options.channel;
     #sample=options.sample; #BulkGraviton_lvjj_c0p2_M1000   
     mass=options.mass;
-    luminosity=options.luminosity_value;
+    
     #sample = "RS1G_WW_lvjj_M%i"%(mass)
     #sample = options.sample+"_M"+str(int(mass))
     sample = options.sample+str(int(mass))
@@ -4022,13 +4085,13 @@ if __name__ == '__main__':
             
     if options.simple:
         print '################# simple mode for %s sample'%(channel)
-        pre_limit_simple(luminosity,channel,sample,lomass,himass);
+        pre_limit_simple(channel,sample,lomass,himass);
     else:
         if options.category.find('HP2') != -1 or options.category.find('ALLP2') != -1:	
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpN",options.interpolate) 
 	else:
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"ExpN","ExpN",options.interpolate) 
-           pre_limit_sb_correction(luminosity,"method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
+           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,4000,"ExpN","ExpTail",options.interpolate) 
 #           pre_limit_sb_correction("method1",channel,sample,options.jetalgo,lomass,himass,40,150,600,1500,"Exp","ExpTail",options.interpolate) 
 	
     print "\n\n------------------------------------------------"
